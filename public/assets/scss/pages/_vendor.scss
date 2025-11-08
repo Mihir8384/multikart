@@ -1,0 +1,108 @@
+/* --- Vendor Registration Layout --- */
+.vendor-registration {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 24px;
+    margin-bottom: 80px;
+}
+
+.vendor-card {
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, .08);
+    border-radius: 8px;
+    padding: 20px;
+}
+
+/* --- Stepper (Sidebar) --- */
+.step-indicator {
+    position: sticky;
+    top: 92px;
+    height: fit-content;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, .08);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.step-indicator .step {
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 8px;
+    border-radius: 6px;
+    color: #5d6a7e;
+}
+
+.step-indicator .step+.step {
+    margin-top: 6px;
+}
+
+.step-indicator .step.active {
+    background: #f3f6ff;
+    color: #2563eb;
+    font-weight: 600;
+}
+
+.step-indicator .step.active .step-number {
+    background: #2563eb;
+    color: #fff;
+}
+
+.step-indicator .step-number {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, .1);
+    display: grid;
+    place-items: center;
+    font-weight: 600;
+    background: #fff;
+}
+
+.step-indicator .step-label {
+    font-size: 14px;
+}
+
+/* --- Form Styles --- */
+.registration-form .form-label {
+    font-weight: 600;
+    color: #344767;
+    margin-bottom: 6px;
+}
+
+.registration-form .form-control,
+.registration-form .form-select {
+    height: 42px;
+    border-color: #e5e7eb;
+}
+
+.registration-form .form-control:focus,
+.registration-form .form-select:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 .2rem rgba(37, 99, 235, .1);
+}
+
+.registration-form .row.g-3 {
+    row-gap: 16px;
+}
+
+.actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* --- RESPONSIVE FIX --- */
+/* This is the un-nested media query that fixes the layout on mobile */
+@media (max-width: 991px) {
+    .vendor-registration {
+        grid-template-columns: 1fr;
+        /* Stacks the layout to 1-column */
+    }
+
+    .step-indicator {
+        position: relative;
+        /* Disables the "sticky" behavior on mobile */
+        top: auto;
+    }
+}

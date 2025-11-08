@@ -3,6 +3,7 @@ import { dir } from "i18next";
 import NextTopLoader from "nextjs-toploader";
 import { ToastContainer } from "react-toastify";
 import "../../public/assets/scss/app.scss";
+import "../../public/assets/scss/pages/_vendor.scss";
 import { I18nProvider } from "./i18n/i18n-context";
 import { detectLanguage } from "./i18n/server";
 import ErrorBoundary from "@/layout/ErrorBoundary";
@@ -29,14 +30,21 @@ export default async function RootLayout({ children }) {
       <html lang={lng} dir={dir(lng)}>
         <head>
           <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
-          <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet"></link>
+          <link
+            rel="preconnect"
+            href="https://fonts.gstatic.com"
+            crossOrigin="true"
+          />
+          <link
+            href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"
+            rel="stylesheet"
+          ></link>
         </head>
         <body suppressHydrationWarning={true}>
           <ErrorBoundary>
-          <TanstackWrapper>{children}</TanstackWrapper>
-          <ToastContainer position="top-center" />
-          <NextTopLoader />
+            <TanstackWrapper>{children}</TanstackWrapper>
+            <ToastContainer position="top-center" />
+            <NextTopLoader />
           </ErrorBoundary>
         </body>
       </html>
