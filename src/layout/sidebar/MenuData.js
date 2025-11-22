@@ -135,7 +135,7 @@ const MENUITEMS = [
         badgeType: "badge bg-warning text-dark ml-3",
         badgeValue: 0,
         permission: ["store.index"],
-      }, // REMOVE THIS LINE 
+      }, // REMOVE THIS LINE
       {
         title: "Wallet",
         path: "/vendor_wallet",
@@ -158,26 +158,26 @@ const MENUITEMS = [
       },
     ],
   },
-  // {
-  //   title: "Orders",
-  //   displayTitle: "Orders",
-  //   icon: <RiListUnordered />,
-  //   type: "sub",
-  //   children: [
-  //     {
-  //       title: "AllOrders",
-  //       path: "/order",
-  //       displayTitle: "All Orders",
-  //       permission: ["order.index"],
-  //     },
-  //     {
-  //       title: "CreateOrder",
-  //       path: "/order/create",
-  //       displayTitle: "Create Order",
-  //       permission: ["order.create"],
-  //     },
-  //   ],
-  // },
+  {
+    title: "Orders",
+    displayTitle: "Orders",
+    icon: <RiListUnordered />,
+    type: "sub",
+    children: [
+      {
+        title: "AllOrders",
+        path: "/order",
+        displayTitle: "All Orders",
+        permission: ["order.index"],
+      },
+      // {
+      //   title: "CreateOrder",
+      //   path: "/order/create",
+      //   displayTitle: "Create Order",
+      //   permission: ["order.create"],
+      // },
+    ],
+  },
   // {
   //   title: "Media",
   //   displayTitle: "Media",
