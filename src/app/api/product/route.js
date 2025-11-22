@@ -489,10 +489,6 @@ import {
   uploadToCloudinary,
   deleteFromCloudinary,
 } from "@/utils/cloudinary/cloudinaryService";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { existsSync } from "fs";
-import path from "path";
 
 /**
  * GET /api/product - Get all MASTER products
@@ -676,27 +672,15 @@ export async function POST(request) {
     const product_thumbnail_file = formData.get("product_thumbnail");
     const product_galleries_files = formData.getAll("product_galleries");
 
-    const uploadDir = join(process.cwd(), "uploads", "temp");
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
-
     try {
-      // Upload Thumbnail
+      // Upload Thumbnail using Buffer (Vercel compatible)
       if (product_thumbnail_file && product_thumbnail_file.size > 0) {
         console.log("☁️ Uploading thumbnail...");
         const bytes = await product_thumbnail_file.arrayBuffer();
         const buffer = Buffer.from(bytes);
-        const tempPath = join(
-          uploadDir,
-          `master-thumb-${Date.now()}${path.extname(
-            product_thumbnail_file.name
-          )}`
-        );
-        await writeFile(tempPath, buffer);
 
         const uploadResult = await uploadToCloudinary(
-          [{ path: tempPath, originalname: product_thumbnail_file.name }],
+          [{ buffer, originalname: product_thumbnail_file.name }],
           "products"
         );
         media.push({
@@ -707,7 +691,7 @@ export async function POST(request) {
         console.log("✅ Thumbnail uploaded");
       }
 
-      // Upload Galleries
+      // Upload Galleries using Buffer (Vercel compatible)
       if (product_galleries_files && product_galleries_files.length > 0) {
         console.log(
           `☁️ Uploading ${product_galleries_files.length} gallery images...`
@@ -716,16 +700,9 @@ export async function POST(request) {
           if (galleryFile && galleryFile.size > 0) {
             const bytes = await galleryFile.arrayBuffer();
             const buffer = Buffer.from(bytes);
-            const tempPath = join(
-              uploadDir,
-              `master-gallery-${Date.now()}-${Math.random()
-                .toString(36)
-                .substr(2, 9)}${path.extname(galleryFile.name)}`
-            );
-            await writeFile(tempPath, buffer);
 
             const uploadResult = await uploadToCloudinary(
-              [{ path: tempPath, originalname: galleryFile.name }],
+              [{ buffer, originalname: galleryFile.name }],
               "products"
             );
             media.push({
