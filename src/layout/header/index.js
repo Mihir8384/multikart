@@ -23,12 +23,19 @@ const Header = ({ setMode, mode, setLtr, settingData }) => {
           </div>
           <ToggleButton setSidebarOpen={setSidebarOpen} />
           <a className="d-lg-none d-block mobile-logo" href="/">
-            {state?.setDarkLogo?.original_url && (
+            {state?.setDarkLogo?.original_url ? (
               <Image
                 src={state?.setDarkLogo?.original_url}
                 height={21}
                 width={120}
                 alt="Dark Logo"
+              />
+            ) : (
+              <Image
+                src="/assets/images/settings/logo-white.png"
+                height={50}
+                width={120}
+                alt="InfoTech Logo"
               />
             )}
           </a>

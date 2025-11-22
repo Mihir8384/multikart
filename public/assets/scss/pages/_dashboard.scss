@@ -1,5 +1,5 @@
 /**=====================
-    Dashboard CSS start
+    Dashboard CSS start - Modern Redesign
 ==========================**/
 .dashboard-tiles {
   margin-bottom: 30px;
@@ -9,19 +9,27 @@
     align-items: center;
     width: 100%;
     justify-content: space-between;
-    background-color: white;
-    padding: calc(13px + (22 - 13) * ((100vw - 320px) / (1920 - 320))) 13px;
-    border-radius: 10px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    padding: calc(16px + (24 - 16) * ((100vw - 320px) / (1920 - 320))) 18px;
+    border-radius: 12px;
     position: relative;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &:hover {
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+      transform: translateY(-2px);
+    }
 
     &:after {
       @include pos;
       left: 0;
       @include center(vertical);
-      width: 3px;
-      height: 35px;
+      width: 4px;
+      height: 40px;
       background-color: var(--theme-color);
-      border-radius: 0;
+      border-radius: 2px;
 
       [dir="rtl"] & {
         left: unset;
@@ -30,25 +38,55 @@
     }
 
     h6 {
-      color: rgba($content-color, 0.8);
+      color: rgba($content-color, 0.7);
+      font-size: 13px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     h3 {
       color: $title-color;
       margin-top: 8px;
       font-weight: 700;
-      font-size: calc(20px + (24 - 20) * ((100vw - 320px) / (1920 - 320)));
+      font-size: calc(22px + (28 - 22) * ((100vw - 320px) / (1920 - 320)));
     }
 
     .icon-box {
-      width: 52px;
-      height: 52px;
-      border-radius: 0;
+      width: 56px;
+      height: 56px;
+      border-radius: 10px;
       @include flex_common;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
 
       i {
         color: $white;
-        font-size: 22px;
+        font-size: 24px;
+      }
+    }
+
+    &:hover .icon-box {
+      transform: scale(1.05) rotate(5deg);
+    }
+  }
+
+  body.dark-only & {
+    .card-tiles {
+      background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+
+      &:hover {
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+      }
+
+      h6 {
+        color: rgba(255, 255, 255, 0.6);
+      }
+
+      h3 {
+        color: #ffffff;
       }
     }
   }
@@ -57,57 +95,91 @@
     >div {
       &:first-child {
         .card-tiles {
-          background: rgba(#0da487, 0.1);
+          background: linear-gradient(135deg, rgba(#0da487, 0.08) 0%, rgba(#0da487, 0.03) 100%);
 
           &:after {
-            background-color: #0da487;
+            background: linear-gradient(180deg, #0da487 0%, #0a8a6a 100%);
           }
 
           .icon-box {
-            background: #0da487;
+            background: linear-gradient(135deg, #0da487 0%, #0a8a6a 100%);
           }
+        }
+
+        body.dark-only & .card-tiles {
+          background: linear-gradient(135deg, rgba(#0da487, 0.2) 0%, rgba(#0da487, 0.05) 100%);
         }
       }
 
       &:nth-child(2) {
         .card-tiles {
-          background: rgba(#ffa53b, 0.1);
+          background: linear-gradient(135deg, rgba(#ffa53b, 0.08) 0%, rgba(#ffa53b, 0.03) 100%);
 
           &:after {
-            background-color: #ffa53b;
+            background: linear-gradient(180deg, #ffa53b 0%, #ff9500 100%);
           }
 
           .icon-box {
-            background: #ffa53b;
+            background: linear-gradient(135deg, #ffa53b 0%, #ff9500 100%);
           }
+        }
+
+        body.dark-only & .card-tiles {
+          background: linear-gradient(135deg, rgba(#ffa53b, 0.2) 0%, rgba(#ffa53b, 0.05) 100%);
         }
       }
 
       &:nth-child(3) {
         .card-tiles {
-          background: rgba(#a04aff, 0.1);
+          background: linear-gradient(135deg, rgba(#a04aff, 0.08) 0%, rgba(#a04aff, 0.03) 100%);
 
           &:after {
-            background-color: #a04aff;
+            background: linear-gradient(180deg, #a04aff 0%, #8b2cff 100%);
           }
 
           .icon-box {
-            background: #a04aff;
+            background: linear-gradient(135deg, #a04aff 0%, #8b2cff 100%);
           }
+        }
+
+        body.dark-only & .card-tiles {
+          background: linear-gradient(135deg, rgba(#a04aff, 0.2) 0%, rgba(#a04aff, 0.05) 100%);
         }
       }
 
       &:nth-child(4) {
         .card-tiles {
-          background: rgba(#ff6161, 0.1);
+          background: linear-gradient(135deg, rgba(#ff6161, 0.08) 0%, rgba(#ff6161, 0.03) 100%);
 
           &:after {
-            background-color: #ff6161;
+            background: linear-gradient(180deg, #ff6161 0%, #ff4040 100%);
           }
 
           .icon-box {
-            background: #ff6161;
+            background: linear-gradient(135deg, #ff6161 0%, #ff4040 100%);
           }
+        }
+
+        body.dark-only & .card-tiles {
+          background: linear-gradient(135deg, rgba(#ff6161, 0.2) 0%, rgba(#ff6161, 0.05) 100%);
+        }
+      }
+
+      &:nth-child(5) {
+        .card-tiles {
+          background: linear-gradient(135deg, rgba(#00d4ff, 0.08) 0%, rgba(#00d4ff, 0.03) 100%);
+
+          &:after {
+            background: linear-gradient(180deg, #00d4ff 0%, #0ea5e9 100%);
+          }
+
+          .icon-box {
+            background: linear-gradient(135deg, #00d4ff 0%, #0ea5e9 100%);
+          }
+        }
+
+        body.dark-only & .card-tiles {
+          background: linear-gradient(135deg, rgba(#00d4ff, 0.2) 0%, rgba(#00d4ff, 0.05) 100%);
         }
       }
     }
@@ -320,33 +392,45 @@
 
 .widget-card,
 .booking-widget-card {
-  padding: calc(18px + (20 - 18) * ((100vw - 320px) / (1920 - 320))) calc(12px + (20 - 12) * ((100vw - 320px) / (1920 - 320)));
+  padding: calc(20px + (24 - 20) * ((100vw - 320px) / (1920 - 320))) calc(16px + (24 - 16) * ((100vw - 320px) / (1920 - 320)));
   display: flex;
   align-items: center;
   flex-direction: row;
-  gap: 10px;
+  gap: 14px;
   margin-bottom: 0;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+  }
 
   @media only screen and (max-width: 575.98px) {
     margin-bottom: 0 !important;
   }
 
   h6 {
-    color: $dark-color;
-    margin-bottom: 7px;
+    color: rgba($content-color, 0.7);
+    margin-bottom: 8px;
     font-weight: 500;
-    color: $grey-9;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
   h2 {
-    font-size: calc(21px + (25 - 21) * ((100vw - 320px) / (1920 - 320)));
-    font-weight: 600;
+    font-size: calc(22px + (28 - 22) * ((100vw - 320px) / (1920 - 320)));
+    font-weight: 700;
     color: $theme-font-color;
     display: flex;
     align-items: flex-end;
 
     body.dark-only & {
-      color: #ddd;
+      color: #ffffff;
     }
 
     span {
@@ -368,17 +452,19 @@
   }
 
   i {
-    --Iconsax-Size: 26px;
+    --Iconsax-Size: 28px;
     --Iconsax-Color: White;
   }
 
   .widget-icon,
   .booking-widget-icon {
     @include flex_common;
-    padding: 10px;
-    border-radius: 0;
-    width: calc(44px + (52 - 44) * ((100vw - 320px) / (1920 - 320)));
-    height: calc(44px + (52 - 44) * ((100vw - 320px) / (1920 - 320)));
+    padding: 12px;
+    border-radius: 10px;
+    width: calc(52px + (60 - 52) * ((100vw - 320px) / (1920 - 320)));
+    height: calc(52px + (60 - 52) * ((100vw - 320px) / (1920 - 320)));
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
 
     svg {
       width: 100%;
@@ -386,56 +472,70 @@
       stroke: $white;
       fill: transparent;
     }
+
+    &:hover {
+      transform: scale(1.08) rotate(-5deg);
+    }
+  }
+
+  body.dark-only & {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+
+    &:hover {
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+    }
   }
 }
 
 .widget-card-box {
   &:nth-child(1) {
     .widget-card {
-      background-color: rgba(134, 144, 156, 0.1);
+      background: linear-gradient(135deg, rgba(#86909C, 0.08) 0%, rgba(#86909C, 0.03) 100%);
 
       .widget-icon {
-        background-color: #86909C;
+        background: linear-gradient(135deg, #86909C 0%, #6b7684 100%);
       }
     }
   }
 
   &:nth-child(2) {
     .widget-card {
-      background-color: rgba(86, 133, 55, 0.1);
+      background: linear-gradient(135deg, rgba(#568537, 0.08) 0%, rgba(#568537, 0.03) 100%);
 
       .widget-icon {
-        background-color: #568537;
+        background: linear-gradient(135deg, #568537 0%, #3f6028 100%);
       }
     }
   }
 
   &:nth-child(3) {
     .widget-card {
-      background-color: rgba(179, 97, 138, 0.1);
+      background: linear-gradient(135deg, rgba(#B3618A, 0.08) 0%, rgba(#B3618A, 0.03) 100%);
 
       .widget-icon {
-        background-color: #B3618A;
+        background: linear-gradient(135deg, #B3618A 0%, #a0445e 100%);
       }
     }
   }
 
   &:nth-child(4) {
     .widget-card {
-      background-color: rgba(73, 86, 121, 0.1);
+      background: linear-gradient(135deg, rgba(#495679, 0.08) 0%, rgba(#495679, 0.03) 100%);
 
       .widget-icon {
-        background-color: #495679;
+        background: linear-gradient(135deg, #495679 0%, #3a4056 100%);
       }
     }
   }
 
   &:nth-child(5) {
     .widget-card {
-      background-color: rgba(14, 165, 233, 0.1);
+      background: linear-gradient(135deg, rgba(#0ea5e9, 0.08) 0%, rgba(#0ea5e9, 0.03) 100%);
 
       .widget-icon {
-        background-color: #0ea5e9;
+        background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
       }
     }
   }
@@ -611,6 +711,149 @@
       font-weight: 600;
       background: #f8f8f8;
       border-bottom: 1px solid #eee;
+    }
+  }
+}
+
+/* Order Status Ribbon Styles */
+.order-status-ribbon {
+  display: flex;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+  gap: 0;
+  background: #f5f5f5;
+
+  .order-status-segment {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 16px;
+    min-height: 80px;
+    text-decoration: none;
+    position: relative;
+    border-left: 4px solid;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    cursor: pointer;
+
+    &:first-child {
+      border-radius: 12px 0 0 12px;
+    }
+
+    &:last-child {
+      border-radius: 0 12px 12px 0;
+    }
+
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: inset 0 -2px 8px rgba(0, 0, 0, 0.1);
+
+      .segment-count {
+        font-weight: 700;
+        font-size: 18px;
+      }
+    }
+
+    .segment-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .segment-icon {
+      width: 24px;
+      height: 24px;
+      object-fit: contain;
+      filter: brightness(0.7);
+    }
+
+    .segment-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #333;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    .segment-count {
+      font-size: 20px;
+      font-weight: 700;
+      transition: all 0.2s ease;
+    }
+  }
+}
+
+/* Responsive Order Status Ribbon */
+@media (max-width: 1024px) {
+  .order-status-ribbon {
+    min-height: auto;
+
+    .order-status-segment {
+      padding: 16px 12px;
+      min-height: 70px;
+
+      .segment-label {
+        font-size: 12px;
+      }
+
+      .segment-count {
+        font-size: 18px;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .order-status-ribbon {
+    flex-wrap: wrap;
+    gap: 8px;
+
+    .order-status-segment {
+      flex: 0 1 calc(33.333% - 6px);
+      padding: 12px 8px;
+      min-height: 65px;
+      border-radius: 8px !important;
+      border-left: 3px solid;
+      border-bottom: 3px solid;
+
+      .segment-label {
+        font-size: 11px;
+      }
+
+      .segment-count {
+        font-size: 16px;
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .order-status-ribbon {
+    flex-wrap: wrap;
+
+    .order-status-segment {
+      flex: 0 1 calc(50% - 4px);
+      padding: 10px 6px;
+      min-height: 60px;
+
+      .segment-label {
+        font-size: 10px;
+      }
+
+      .segment-count {
+        font-size: 14px;
+      }
+
+      .segment-icon {
+        width: 18px;
+        height: 18px;
+      }
     }
   }
 }
