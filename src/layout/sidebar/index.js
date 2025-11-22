@@ -39,6 +39,9 @@ const Sidebar = () => {
   return (
     <div className={`sidebar-wrapper ${sidebarOpen ? "close_icon" : ""}`}>
       <div className={`${mounted ? "skeleton-loader" : ""}`}>
+        <div className="sidebar-admin-header">
+          <span className="admin-panel-text">ADMIN PANEL</span>
+        </div>
         <LogoWrapper setSidebarOpen={setSidebarOpen} />
         <nav className="sidebar-main">
           <div id="sidebar-menu">

@@ -1,6 +1,98 @@
 /**=====================
     Sidebar CSS Start
 ==========================**/
+
+/* Admin Panel header shown at top of sidebar (styled as logo) */
+.sidebar-admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 12px;
+  background: transparent;
+}
+
+.sidebar-admin-header .admin-panel-text {
+  font-family: Georgia, 'Times New Roman', Times, serif;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding-bottom: 8px;
+  position: relative;
+  /* gradient text using primary color */
+  background: linear-gradient(90deg, $primary-color 0%, darken($primary-color, 8%) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.sidebar-admin-header .admin-panel-text::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -6px;
+  width: 74px;
+  height: 3px;
+  border-radius: 3px;
+  background: rgba($primary-color, 0.14);
+  box-shadow: 0 4px 10px rgba($primary-color, 0.08);
+}
+
+/* Dark mode: ensure good contrast against dark sidebar */
+body.dark-only .sidebar-admin-header .admin-panel-text {
+  background: linear-gradient(90deg, lighten($primary-color, 6%) 0%, $primary-color 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+@media (max-width: 576px) {
+  .sidebar-admin-header .admin-panel-text {
+    font-size: 16px;
+    letter-spacing: 3px;
+  }
+}
+
+/* Sidebar logo area adjustments to ensure logo is visible and centered */
+.sidebar-logo-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px 12px;
+  height: 160px; /* larger area so logo fills the gap */
+}
+
+.sidebar-logo-area .sidebar-logo-img {
+  position: relative;
+  width: 180px;
+  height: 90px;
+}
+
+@media (max-width: 992px) {
+  .sidebar-logo-area {
+    height: 140px;
+  }
+  .sidebar-logo-area .sidebar-logo-img {
+    width: 150px;
+    height: 72px;
+  }
+}
+
+@media (max-width: 576px) {
+  .sidebar-logo-area .sidebar-logo-img {
+    width: 130px;
+    height: 64px;
+  }
+  .sidebar-logo-area {
+    height: 120px;
+    padding-bottom: 10px;
+  }
+}
+
 %sidebar-after {
   @include pos;
   top: 48%;

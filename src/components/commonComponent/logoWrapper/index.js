@@ -1,36 +1,34 @@
 import Image from "next/image";
 import { useContext } from "react";
 import SettingContext from "../../../helper/settingContext";
-import Logo from "./Logo";
-import ToggleButton from "./ToggleButton";
+// Logo and toggle intentionally omitted to reserve space for a larger brand mark
 
 const LogoWrapper = ({ setSidebarOpen }) => {
   const { state } = useContext(SettingContext);
   return (
-    <div className="logo-wrapper logo-wrapper-center">
-      {/* <Logo /> */}
+    <div className="logo-wrapper logo-wrapper-center sidebar-logo-area">
+      {/* Render a larger, responsive logo that fills the header gap */}
       {state?.setTinyLogo?.original_url ? (
-        <Image
-          className="img-fluid logo-sm w-auto"
-          src={
-            state?.setTinyLogo?.original_url
-              ? state?.setTinyLogo?.original_url
-              : null
-          }
-          alt="Tiny Logo"
-          width={150}
-          height={29}
-        />
+        <div className="sidebar-logo-img">
+          <Image
+            src={state?.setTinyLogo?.original_url}
+            alt="Tiny Logo"
+            fill
+            sizes="(max-width: 600px) 80px, 120px"
+            style={{ objectFit: "contain" }}
+          />
+        </div>
       ) : (
-        <Image
-          className="img-fluid logo-sm w-auto"
-          src="/assets/images/settings/tiny-logo.png"
-          alt="InfoTech Tiny Logo"
-          width={60}
-          height={60}
-        />
+        <div className="sidebar-logo-img">
+          <Image
+            src="/assets/images/settings/tiny-logo.png"
+            alt="InfoTech Tiny Logo"
+            fill
+            sizes="(max-width: 600px) 80px, 120px"
+            style={{ objectFit: "contain" }}
+          />
+        </div>
       )}
-      <ToggleButton setSidebarOpen={setSidebarOpen} />
     </div>
   );
 };
