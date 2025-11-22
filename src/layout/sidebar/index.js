@@ -1,4 +1,3 @@
-import LogoWrapper from "@/components/commonComponent/logoWrapper";
 import AccountContext from "@/helper/accountContext";
 import SettingContext from "@/helper/settingContext";
 import dynamic from "next/dynamic";
@@ -41,7 +40,6 @@ const Sidebar = () => {
         <div className="sidebar-admin-header">
           <span className="admin-panel-text">ADMIN PANEL</span>
         </div>
-        <LogoWrapper setSidebarOpen={setSidebarOpen} />
         <nav className="sidebar-main">
           <div id="sidebar-menu">
             <ul className="sidebar-links" id="simple-bar">

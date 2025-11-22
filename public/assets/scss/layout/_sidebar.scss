@@ -7,7 +7,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 14px 12px;
+  /* pushed down slightly so it blends better with design */
+  padding: 28px 12px 8px;
+  margin-bottom: 6px;
   background: transparent;
 }
 
