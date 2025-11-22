@@ -135,7 +135,7 @@ const MENUITEMS = [
         badgeType: "badge bg-warning text-dark ml-3",
         badgeValue: 0,
         permission: ["store.index"],
-      }, // ADD THIS LINE
+      }, // REMOVE THIS LINE 
       {
         title: "Wallet",
         path: "/vendor_wallet",
