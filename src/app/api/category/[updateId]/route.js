@@ -6,9 +6,6 @@ import {
   uploadToCloudinary,
   deleteFromCloudinary,
 } from "@/utils/cloudinary/cloudinaryService";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { existsSync } from "fs";
 import path from "path";
 import { requireAdmin, requireAuth } from "@/utils/auth/serverAuth"; // 1. Import requireAuth
 
@@ -278,11 +275,6 @@ export async function PUT(request, { params }) {
       }
     }
 
-    const uploadDir = join(process.cwd(), "uploads", "temp");
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
-
     let category_image_url = existingCategory.category_image;
     let category_icon_url = existingCategory.category_icon;
     let category_meta_image_url = existingCategory.category_meta_image;
@@ -296,15 +288,8 @@ export async function PUT(request, { params }) {
         }
         const bytes = await category_image_file.arrayBuffer();
         const buffer = Buffer.from(bytes);
-        const tempPath = join(
-          uploadDir,
-          `category-image-${Date.now()}${path.extname(
-            category_image_file.name
-          )}`
-        );
-        await writeFile(tempPath, buffer);
         const uploadResult = await uploadToCloudinary(
-          [{ path: tempPath, originalname: category_image_file.name }],
+          [{ buffer, originalname: category_image_file.name }],
           "categories"
         );
         category_image_url = uploadResult[0].secure_url;
@@ -323,13 +308,8 @@ export async function PUT(request, { params }) {
         }
         const bytes = await category_icon_file.arrayBuffer();
         const buffer = Buffer.from(bytes);
-        const tempPath = join(
-          uploadDir,
-          `category-icon-${Date.now()}${path.extname(category_icon_file.name)}`
-        );
-        await writeFile(tempPath, buffer);
         const uploadResult = await uploadToCloudinary(
-          [{ path: tempPath, originalname: category_icon_file.name }],
+          [{ buffer, originalname: category_icon_file.name }],
           "categories"
         );
         category_icon_url = uploadResult[0].secure_url;
@@ -350,15 +330,8 @@ export async function PUT(request, { params }) {
         }
         const bytes = await category_meta_image_file.arrayBuffer();
         const buffer = Buffer.from(bytes);
-        const tempPath = join(
-          uploadDir,
-          `category-meta-${Date.now()}${path.extname(
-            category_meta_image_file.name
-          )}`
-        );
-        await writeFile(tempPath, buffer);
         const uploadResult = await uploadToCloudinary(
-          [{ path: tempPath, originalname: category_meta_image_file.name }],
+          [{ buffer, originalname: category_meta_image_file.name }],
           "categories"
         );
         category_meta_image_url = uploadResult[0].secure_url;

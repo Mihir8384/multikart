@@ -1,11 +1,15 @@
-import { useContext, useEffect, useState } from 'react';
-import RadioAttribute from './RadioAttribute';
-import DropdownAttribute from './DropdownAttribute';
-import ColorAttribute from './ColorAttribute';
-import ImageOtherAttributes from './Image&OtherAttributes';
-import CartContext from '@/helper/cartContext';
+import { useContext, useEffect, useState } from "react";
+import RadioAttribute from "./RadioAttribute";
+import DropdownAttribute from "./DropdownAttribute";
+import ColorAttribute from "./ColorAttribute";
+import ImageOtherAttributes from "./Image&OtherAttributes";
+import CartContext from "@/helper/cartContext";
 
-const ProductAttribute = ({ productState, setProductState, stickyAddToCart }) => {
+const ProductAttribute = ({
+  productState,
+  setProductState,
+  stickyAddToCart,
+}) => {
   const [selectedOptions, setSelectedOptions] = useState([]);
   const [soldOutAttributesIds, setSoldOutAttributesIds] = useState([]);
   const { cartProducts } = useContext(CartContext);
@@ -17,7 +21,9 @@ const ProductAttribute = ({ productState, setProductState, stickyAddToCart }) =>
           setProductState((prev) => {
             return {
               ...prev,
-              attributeValues: Array.from(new Set([...prev.attributeValues, attribute_value?.id])),
+              attributeValues: Array.from(
+                new Set([...prev.attributeValues, attribute_value?.id])
+              ),
             };
           });
         }
@@ -29,12 +35,17 @@ const ProductAttribute = ({ productState, setProductState, stickyAddToCart }) =>
       });
     } else {
       // Set First Variant Default
-      for (const attribute of productObj?.attributes) {
-        if (productState.attributeValues?.length && attribute?.attribute_values?.length) {
-          for (const value of attribute?.attribute_values) {
-            if (productState?.attributeValues?.includes(value?.id)) {
-              setVariant(productObj?.variations, value);
-              break; // Break out of the inner loop after setting the first variant
+      if (productObj?.attributes?.length) {
+        for (const attribute of productObj?.attributes) {
+          if (
+            productState.attributeValues?.length &&
+            attribute?.attribute_values?.length
+          ) {
+            for (const value of attribute?.attribute_values) {
+              if (productState?.attributeValues?.includes(value?.id)) {
+                setVariant(productObj?.variations, value);
+                break; // Break out of the inner loop after setting the first variant
+              }
             }
           }
         }
@@ -43,25 +54,32 @@ const ProductAttribute = ({ productState, setProductState, stickyAddToCart }) =>
 
     // Set Variation Image
     productObj?.variations?.forEach((variation) => {
-      let attrValues = variation?.attribute_values?.map((attribute_value) => attribute_value?.id);
-      productObj?.attributes.filter((attribute) => {
-        if (attribute.style == 'image') {
-          attribute.attribute_values.filter((attribute_value) => {
-            if (productState?.attributeValues?.includes(attribute_value.id)) {
-              if (attrValues.includes(attribute_value.id)) {
-                attribute_value.variation_image = variation.variation_image;
+      let attrValues = variation?.attribute_values?.map(
+        (attribute_value) => attribute_value?.id
+      );
+      if (productObj?.attributes?.length) {
+        productObj?.attributes.filter((attribute) => {
+          if (attribute.style == "image") {
+            attribute.attribute_values?.filter((attribute_value) => {
+              if (productState?.attributeValues?.includes(attribute_value.id)) {
+                if (attrValues.includes(attribute_value.id)) {
+                  attribute_value.variation_image = variation.variation_image;
+                }
               }
-            }
-          });
-        }
-      });
+            });
+          }
+        });
+      }
     });
   };
   const checkStockAvailable = () => {
     if (productState?.selectedVariation) {
       setProductState((prevState) => {
         const tempSelectedVariation = { ...prevState.selectedVariation };
-        tempSelectedVariation.stock_status = tempSelectedVariation.quantity < prevState.productQty ? 'out_of_stock' : 'in_stock';
+        tempSelectedVariation.stock_status =
+          tempSelectedVariation.quantity < prevState.productQty
+            ? "out_of_stock"
+            : "in_stock";
         return {
           ...prevState,
           selectedVariation: tempSelectedVariation,
@@ -70,7 +88,10 @@ const ProductAttribute = ({ productState, setProductState, stickyAddToCart }) =>
     } else {
       setProductState((prevState) => {
         const tempProduct = { ...prevState.product };
-        tempProduct.stock_status = tempProduct.quantity < prevState.productQty ? 'out_of_stock' : 'in_stock';
+        tempProduct.stock_status =
+          tempProduct.quantity < prevState.productQty
+            ? "out_of_stock"
+            : "in_stock";
         return {
           ...prevState,
           product: tempProduct,
@@ -86,16 +107,26 @@ const ProductAttribute = ({ productState, setProductState, stickyAddToCart }) =>
   }, [productState?.attributeValues, cartItem, selectedOptions]);
 
   useEffect(() => {
-    productState?.product && setCartItem(cartProducts?.find((elem) => elem?.product?.id == productState?.product?.id));
+    productState?.product &&
+      setCartItem(
+        cartProducts?.find(
+          (elem) => elem?.product?.id == productState?.product?.id
+        )
+      );
   }, [cartProducts, productState]);
 
   const setVariant = (variations, value) => {
     let tempSelected = selectedOptions;
     let tempSoldOutAttributesIds = [];
     setSoldOutAttributesIds((prev) => tempSoldOutAttributesIds);
-    const index = tempSelected?.findIndex((item) => Number(item.attribute_id) === Number(value?.attribute_id));
+    const index = tempSelected?.findIndex(
+      (item) => Number(item.attribute_id) === Number(value?.attribute_id)
+    );
     if (index === -1) {
-      tempSelected.push({ id: Number(value?.id), attribute_id: Number(value?.attribute_id) });
+      tempSelected.push({
+        id: Number(value?.id),
+        attribute_id: Number(value?.attribute_id),
+      });
       setSelectedOptions(tempSelected);
     } else {
       tempSelected[index].id = value?.id;
@@ -103,20 +134,29 @@ const ProductAttribute = ({ productState, setProductState, stickyAddToCart }) =>
     }
 
     variations?.forEach((variation) => {
-      let attrValues = variation?.attribute_values?.map((attribute_value) => attribute_value?.id);
+      let attrValues = variation?.attribute_values?.map(
+        (attribute_value) => attribute_value?.id
+      );
       let tempVariantIds = tempSelected?.map((variants) => variants?.id);
       setProductState((prev) => {
         return { ...prev, variantIds: tempVariantIds };
       });
-      let doValuesMatch = attrValues.length === tempSelected.length && attrValues.every((value) => tempVariantIds.includes(value));
+      let doValuesMatch =
+        attrValues.length === tempSelected.length &&
+        attrValues.every((value) => tempVariantIds.includes(value));
       if (doValuesMatch) {
         setProductState((prev) => {
-          return { ...prev, selectedVariation: variation, variation_id: variation?.id, variation: variation };
+          return {
+            ...prev,
+            selectedVariation: variation,
+            variation_id: variation?.id,
+            variation: variation,
+          };
         });
         checkStockAvailable();
       }
 
-      if (variation?.stock_status == 'out_of_stock') {
+      if (variation?.stock_status == "out_of_stock") {
         variation?.attribute_values.filter((attr_value) => {
           if (attrValues.some((value) => tempVariantIds.includes(value))) {
             if (attrValues.every((value) => tempVariantIds.includes(value))) {
@@ -126,7 +166,10 @@ const ProductAttribute = ({ productState, setProductState, stickyAddToCart }) =>
               tempSoldOutAttributesIds.push(attr_value.id);
               setSoldOutAttributesIds((prev) => [...tempSoldOutAttributesIds]);
             }
-          } else if (attrValues.length == 1 && attrValues.includes(attr_value.id)) {
+          } else if (
+            attrValues.length == 1 &&
+            attrValues.includes(attr_value.id)
+          ) {
             tempSoldOutAttributesIds.push(attr_value.id);
             setSoldOutAttributesIds((prev) => [...tempSoldOutAttributesIds]);
           }
@@ -146,24 +189,53 @@ const ProductAttribute = ({ productState, setProductState, stickyAddToCart }) =>
   return (
     <>
       {productState?.product?.attributes?.map((elem, i) => (
-        <div className='product-package' key={i}>
+        <div className="product-package" key={i}>
           {stickyAddToCart ? (
-            <DropdownAttribute elem={elem} setVariant={setVariant} soldOutAttributesIds={soldOutAttributesIds} i={i} productState={productState} />
+            <DropdownAttribute
+              elem={elem}
+              setVariant={setVariant}
+              soldOutAttributesIds={soldOutAttributesIds}
+              i={i}
+              productState={productState}
+            />
           ) : (
             <>
-              <div className='product-title'>
+              <div className="product-title">
                 <h4>
                   {elem?.name} : {elem?.selected_value}
                 </h4>
               </div>
-              {elem?.style == 'radio' ? (
-                <RadioAttribute elem={elem} setVariant={setVariant} soldOutAttributesIds={soldOutAttributesIds} i={i} productState={productState} />
-              ) : elem?.style == 'dropdown' ? (
-                <DropdownAttribute elem={elem} setVariant={setVariant} soldOutAttributesIds={soldOutAttributesIds} i={i} productState={productState} />
-              ) : elem?.style == 'color' ? (
-                <ColorAttribute elem={elem} setVariant={setVariant} soldOutAttributesIds={soldOutAttributesIds} productState={productState}  i={i}/>
+              {elem?.style == "radio" ? (
+                <RadioAttribute
+                  elem={elem}
+                  setVariant={setVariant}
+                  soldOutAttributesIds={soldOutAttributesIds}
+                  i={i}
+                  productState={productState}
+                />
+              ) : elem?.style == "dropdown" ? (
+                <DropdownAttribute
+                  elem={elem}
+                  setVariant={setVariant}
+                  soldOutAttributesIds={soldOutAttributesIds}
+                  i={i}
+                  productState={productState}
+                />
+              ) : elem?.style == "color" ? (
+                <ColorAttribute
+                  elem={elem}
+                  setVariant={setVariant}
+                  soldOutAttributesIds={soldOutAttributesIds}
+                  productState={productState}
+                  i={i}
+                />
               ) : (
-                <ImageOtherAttributes elem={elem} setVariant={setVariant} soldOutAttributesIds={soldOutAttributesIds} productState={productState} />
+                <ImageOtherAttributes
+                  elem={elem}
+                  setVariant={setVariant}
+                  soldOutAttributesIds={soldOutAttributesIds}
+                  productState={productState}
+                />
               )}
             </>
           )}

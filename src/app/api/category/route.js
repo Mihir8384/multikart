@@ -5,9 +5,6 @@ import {
   uploadToCloudinary,
   deleteFromCloudinary,
 } from "@/utils/cloudinary/cloudinaryService";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { existsSync } from "fs";
 import path from "path";
 import { requireAdmin } from "@/utils/auth/serverAuth";
 
