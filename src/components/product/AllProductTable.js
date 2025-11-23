@@ -109,7 +109,9 @@ const AllProductTable = ({ data, ...props }) => {
         return {
           ...item,
           id: item.id || item._id,
-          product_thumbnail: primaryImage, // Assign primary image to the key the table expects
+          product_thumbnail: primaryImage
+            ? { original_url: primaryImage }
+            : null, // Avatar expects an object with original_url
           product_name: item.product_name, // Ensure new key is passed
           category_name: item.category_id?.name || "N/A", // Get populated category name
           vendor_count: item.linked_vendor_offerings?.length || 0, // Get vendor count

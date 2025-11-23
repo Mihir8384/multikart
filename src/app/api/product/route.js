@@ -671,6 +671,8 @@ export async function POST(request) {
     const media = [];
     const product_thumbnail_file = formData.get("product_thumbnail");
     const product_galleries_files = formData.getAll("product_galleries");
+    // Support new front-end field `new_media_files` (multiple files appended as same key)
+    const new_media_files = formData.getAll("new_media_files");
 
     try {
       // Upload Thumbnail using Buffer (Vercel compatible)
@@ -714,6 +716,31 @@ export async function POST(request) {
         }
         console.log(`✅ Uploaded ${media.length - 1} gallery images`);
       }
+
+      // Upload any `new_media_files` sent by the front-end (master product form)
+      if (new_media_files && new_media_files.length > 0) {
+        console.log(
+          `☁️ Uploading ${new_media_files.length} new_media_files...`
+        );
+        for (const fileItem of new_media_files) {
+          if (fileItem && fileItem.size > 0) {
+            const bytes = await fileItem.arrayBuffer();
+            const buffer = Buffer.from(bytes);
+
+            const uploadResult = await uploadToCloudinary(
+              [{ buffer, originalname: fileItem.name }],
+              "products"
+            );
+
+            media.push({
+              url: uploadResult[0].secure_url,
+              is_primary: false,
+              type: "image",
+            });
+          }
+        }
+        console.log(`✅ Uploaded ${new_media_files.length} new media files`);
+      }
     } catch (uploadError) {
       console.error("❌ Upload error:", uploadError);
       return NextResponse.json(
@@ -724,6 +751,12 @@ export async function POST(request) {
         },
         { status: 500 }
       );
+    }
+
+    // If no explicit primary image was set but we have uploaded media,
+    // mark the first media item as primary so front-end components show an image.
+    if (media.length > 0 && !media.some((m) => m.is_primary)) {
+      media[0].is_primary = true;
     }
 
     // --- 6. Save New Master Product ---
