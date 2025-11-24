@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -17,12 +19,34 @@ const TopDashSection = ({ role }) => {
   const { convertCurrency } = useContext(SettingContext);
   const router = useRouter();
 
-  const { data, refetch } = useCustomQuery([StatisticsCountAPI], () => request({ url: StatisticsCountAPI, params: { filter_by: filterValue } }, router), { refetchOnWindowFocus: false, select: (data) => data?.data });
+  const { data, refetch } = useCustomQuery(
+    [StatisticsCountAPI],
+    () =>
+      request(
+        { url: StatisticsCountAPI, params: { filter_by: filterValue } },
+        router
+      ),
+    { refetchOnWindowFocus: false }
+  );
+
+  // Normalize response to final payload shape:
+  // Possible shapes:
+  // - axiosResponse -> axiosResponse.data -> { success: true, data: payload }
+  // - axiosResponse -> axiosResponse.data -> payload
+  // - direct payload returned
+  const stats = data?.data?.data ?? data?.data ?? data ?? {};
+
   useEffect(() => {
     if (filterValue != null) {
       refetch();
     }
   }, [filterValue]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      console.debug("TopDashSection stats:", stats);
+    }
+  }, [stats]);
 
   return (
     <section className="dashboard-tiles">
@@ -37,7 +61,12 @@ const TopDashSection = ({ role }) => {
               </CardBody>
             </Card>
           </Col> */}
-          <OrderStatus setFilterValue={setFilterValue} data={data} filterType={filterType} setFilterType={setFilterType} />
+          <OrderStatus
+            setFilterValue={setFilterValue}
+            data={stats}
+            filterType={filterType}
+            setFilterType={setFilterType}
+          />
         </Row>
 
         <div className="card-bottom-space">
@@ -45,11 +74,25 @@ const TopDashSection = ({ role }) => {
             <Col className="widget-card-box">
               <a className="widget-card card mb-0">
                 <div className="widget-icon">
-                  <Image height={26} width={26} src={"/assets/images/svg/empty-wallet.svg"} className="img-fluid" alt="emptyWallet" />
+                  <Image
+                    height={26}
+                    width={26}
+                    src={"/assets/images/svg/empty-wallet.svg"}
+                    className="img-fluid"
+                    alt="emptyWallet"
+                  />
                 </div>
                 <div>
                   <h6>{t("TotalRevenue")}</h6>
-                  <h2>{convertCurrency(data?.total_revenue || 0, true)}</h2>
+                  <h2>
+                    {convertCurrency(
+                      stats?.total_revenue ??
+                        stats?.totalRevenue ??
+                        stats?.revenue ??
+                        0,
+                      true
+                    )}
+                  </h2>
                 </div>
               </a>
             </Col>
@@ -58,44 +101,92 @@ const TopDashSection = ({ role }) => {
               <Col className="widget-card-box">
                 <Link href={`/product`} className="widget-card card mb-0">
                   <div className="widget-icon">
-                    <Image height={26} width={26} src={"/assets/images/svg/receipt-2.svg"} className="img-fluid" alt="receipt2" />
+                    <Image
+                      height={26}
+                      width={26}
+                      src={"/assets/images/svg/receipt-2.svg"}
+                      className="img-fluid"
+                      alt="receipt2"
+                    />
                   </div>
                   <div>
                     <h6>{t("TotalProducts")}</h6>
-                    <h2>{data?.total_products}</h2>
+                    <h2>
+                      {stats?.total_products ??
+                        stats?.totalProducts ??
+                        stats?.products_count ??
+                        stats?.products ??
+                        0}
+                    </h2>
                   </div>
                 </Link>
               </Col>
               <Col className="widget-card-box">
                 <Link href={`/order`} className="widget-card card mb-0">
                   <div className="widget-icon">
-                    <Image height={26} width={26} src={"/assets/images/svg/medal-star.svg"} className="img-fluid" alt="medal-star" />
+                    <Image
+                      height={26}
+                      width={26}
+                      src={"/assets/images/svg/medal-star.svg"}
+                      className="img-fluid"
+                      alt="medal-star"
+                    />
                   </div>
                   <div>
                     <h6>{t("TotalOrders")}</h6>
-                    <h2>{data?.total_orders}</h2>
+                    <h2>
+                      {stats?.total_orders ??
+                        stats?.totalOrders ??
+                        stats?.orders_count ??
+                        stats?.orders ??
+                        0}
+                    </h2>
                   </div>
                 </Link>
               </Col>
               <Col className="widget-card-box">
                 <Link href={`/store`} className="widget-card card mb-0">
                   <div className="widget-icon">
-                    <Image height={26} width={26} src={"/assets/images/svg/shop-white.svg"} className="img-fluid" alt="shop-white" />
+                    <Image
+                      height={26}
+                      width={26}
+                      src={"/assets/images/svg/shop-white.svg"}
+                      className="img-fluid"
+                      alt="shop-white"
+                    />
                   </div>
                   <div>
                     <h6>{t("TotalStores")}</h6>
-                    <h2>{data?.total_stores}</h2>
+                    <h2>
+                      {stats?.total_stores ??
+                        stats?.totalStores ??
+                        stats?.stores_count ??
+                        stats?.stores ??
+                        0}
+                    </h2>
                   </div>
                 </Link>
               </Col>
               <Col className="widget-card-box">
                 <Link href={`/user`} className="widget-card card">
                   <div className="widget-icon">
-                    <Image height={26} width={26} src={"/assets/images/svg/people.svg"} className="img-fluid" alt="people" />
+                    <Image
+                      height={26}
+                      width={26}
+                      src={"/assets/images/svg/people.svg"}
+                      className="img-fluid"
+                      alt="people"
+                    />
                   </div>
                   <div>
                     <h6>{t("TotalUser")}</h6>
-                    <h2>{data?.total_users}</h2>
+                    <h2>
+                      {stats?.total_users ??
+                        stats?.totalUsers ??
+                        stats?.users_count ??
+                        stats?.users ??
+                        0}
+                    </h2>
                   </div>
                 </Link>
               </Col>
