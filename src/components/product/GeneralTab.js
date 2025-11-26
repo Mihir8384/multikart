@@ -118,7 +118,7 @@ const GeneralTab = ({ values, setFieldValue, updateId }) => {
       request(
         {
           url: Category,
-          params: { status: 1, type: "product", is_leaf: true },
+          params: { status: 1, type: "product", is_leaf: true, limit: 1000 },
         },
         router
       ),
