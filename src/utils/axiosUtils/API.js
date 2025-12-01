@@ -177,5 +177,8 @@ export const sortMenu = "/menu/sort";
 // variants api
 export const VariantAPI = "variant"; // <--- ADD THIS LINE
 
+//Vendor api
+export const VendorProductAPI = "/vendor/product";
+
 // // tags api
 // export const tag = "/tag";

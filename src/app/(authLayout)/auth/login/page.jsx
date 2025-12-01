@@ -33,18 +33,6 @@ const Login = () => {
       <ShowBox showBoxMessage={showBoxMessage} />
       <LoginBoxWrapper>
         <div className="log-in-title text-center">
-          {/* <Image
-            className="for-white"
-            src={
-              state?.setDarkLogo?.original_url
-                ? state?.setDarkLogo?.original_url
-                : "/assets/images/logo.png"
-            }
-            alt="Light Logo"
-            width={140}
-            height={28}
-            priority
-          /> */}
           <h4>{t("LogInYourAccount")}</h4>
         </div>
         <div className="input-box">
@@ -56,80 +44,63 @@ const Login = () => {
             validationSchema={YupObject({
               email: emailSchema,
               password: nameSchema,
-              // recaptcha: settingObj?.google_reCaptcha?.status ? recaptchaSchema : "",
             })}
             onSubmit={async (values, { setSubmitting }) => {
               try {
                 setSubmitting(true);
-
-                // Prepare login data
                 const loginData = {
                   email: values.email,
                   password: values.password,
                 };
 
-                console.log("Login data:", loginData);
-
-                // Make API call
                 const response = await request({
                   url: "/auth/signin",
                   method: "POST",
                   data: loginData,
                 });
 
-                console.log("Full response:", response);
-
                 if (response?.data?.success) {
-                  console.log("Login successful:", response);
-
-                  // Store authentication data from API response structure
                   const token = response?.data?.data?.token;
                   const user = response?.data?.data?.user;
 
                   if (token && user) {
-                    console.log("Storing auth data:", { token, user });
                     setAuthData(token, user);
 
-                    // Immediate redirect
-                    console.log("Redirecting to dashboard");
-                    router.push("/dashboard");
+                    // --- THIS IS THE FIX ---
+                    const isSuperAdmin = user.isAdmin; // Check the boolean flag first
+                    const roleName = user.role?.name?.toLowerCase();
+
+                    // Priority 1: Super Admin OR 'admin' role -> Admin Dashboard
+                    if (isSuperAdmin || roleName === "admin") {
+                      console.log("Redirecting to ADMIN dashboard (Priority)");
+                      router.push("/dashboard");
+                    }
+                    // Priority 2: Vendor role -> Vendor Dashboard
+                    else if (roleName === "vendor") {
+                      console.log("Redirecting to VENDOR dashboard");
+                      router.push("/vendor/dashboard");
+                    }
+                    // Priority 3: Default (Customer/Other) -> Main Dashboard
+                    else {
+                      console.log("Redirecting to default dashboard");
+                      router.push("/dashboard");
+                    }
+                    // -----------------------
                   } else {
-                    console.error("Token or user data missing:", {
-                      token,
-                      user,
-                    });
-                    alert(
-                      "Login successful but missing authentication data. Please try again."
-                    );
+                    alert("Login successful but missing authentication data.");
                   }
                 } else {
-                  // Show error message from response
                   const errorMessage =
-                    response?.data?.message ||
-                    "Login failed. Please try again.";
+                    response?.data?.message || "Login failed.";
                   alert(errorMessage);
                 }
               } catch (error) {
                 console.error("Login error:", error);
-
-                // Handle different types of errors
                 let errorMessage =
-                  "Login failed. Please check your credentials and try again.";
-
+                  "Login failed. Please check your credentials.";
                 if (error?.response?.data?.message) {
                   errorMessage = error.response.data.message;
-                } else if (error?.response?.status === 401) {
-                  errorMessage = "Invalid email or password. Please try again.";
-                } else if (error?.response?.status === 422) {
-                  const errors = error.response.data.errors;
-                  const firstError = Object.values(errors)[0];
-                  errorMessage = Array.isArray(firstError)
-                    ? firstError[0]
-                    : firstError;
-                } else if (error?.message) {
-                  errorMessage = error.message;
                 }
-
                 alert(errorMessage);
               } finally {
                 setSubmitting(false);
@@ -184,16 +155,6 @@ const Login = () => {
                     )}
                   </Col>
                 )}
-                <Col sm="12">
-                  <div className="forgot-box">
-                    <Link
-                      href={`/auth/forgot-password`}
-                      className="forgot-password"
-                    >
-                      {t("ForgotPassword")}?
-                    </Link>
-                  </div>
-                </Col>
                 <Col sm="12">
                   <Btn
                     title={isSubmitting ? "Logging in..." : "Login"}
