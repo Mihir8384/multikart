@@ -1,30 +1,20 @@
 import TableWrapper from "../../utils/hoc/TableWrapper";
 import ShowTable from "../table/ShowTable";
 import usePermissionCheck from "../../utils/hooks/usePermissionCheck";
-import Loader from "../commonComponent/Loader"; // Import Loader
-import { useTranslation } from "react-i18next"; // Import useTranslation
+import Loader from "../commonComponent/Loader";
+import { useTranslation } from "react-i18next";
 
 const AllVariantsTable = ({ data, ...props }) => {
-  const { t } = useTranslation("common"); // Initialize t
-  const [create, edit, destroy] = usePermissionCheck(
-    ["create", "edit", "destroy"],
-    "variant"
-  );
-  console.log(
-    "Permissions in variants - Create:",
-    create,
-    "Edit:",
-    edit,
-    "Destroy:",
-    destroy
-  );
+  const { t } = useTranslation("common");
+  const [edit, destroy] = usePermissionCheck(["edit", "destroy"]);
+  console.log("Permissions in variants - Edit:", edit, "Destroy:", destroy);
   console.log("Variants Data:", data);
 
   const headerObj = {
     checkBox: false,
     isSerialNo: true,
-    isOption: edit == false && destroy == false ? false : true,
-    noEdit: edit ? false : true,
+    isOption: true, // Force Action column to always show
+    noEdit: true, // Disable row click navigation - only Action buttons should work
     optionHead: { title: "Action" },
     column: [
       {
@@ -71,8 +61,8 @@ const AllVariantsTable = ({ data, ...props }) => {
       <ShowTable
         {...props}
         headerData={headerObj}
-        editPermission={edit}
-        destroyPermission={destroy}
+        editPermission={true}
+        destroyPermission={true}
       />
     </>
   );

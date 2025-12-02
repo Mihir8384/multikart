@@ -629,20 +629,58 @@ export async function PUT(request, { params }) {
       );
     }
 
-    const formData = await request.formData();
-    console.log("📥 Received FormData for Master Product update");
+    // Check Content-Type to determine if it's a simple status toggle or full form update
+    const contentType = request.headers.get("content-type") || "";
+    const isSimpleUpdate = contentType.includes("application/json");
 
-    const productDataString = formData.get("data");
-    const updateData = productDataString ? JSON.parse(productDataString) : {};
+    let updateData = {};
+    let isFormDataUpdate = false;
 
-    // --- FIX: Handle empty brand_id ---
-    // If brand_id is an empty string, set it to null so Mongoose doesn't crash
-    if (updateData.brand_id === "") {
+    if (isSimpleUpdate) {
+      // Simple JSON update (e.g., status toggle from table)
+      console.log("📥 Received JSON update (status toggle)");
+      updateData = await request.json();
+      console.log("📝 Status update data:", updateData);
+
+      // Convert numeric status (0/1) to string status (inactive/active) if needed
+      if (updateData.status !== undefined) {
+        if (typeof updateData.status === "number") {
+          const newStatus = updateData.status === 1 ? "active" : "inactive";
+          console.log(
+            `🔄 Converting numeric status ${updateData.status} to string '${newStatus}'`
+          );
+          updateData.status = newStatus;
+        }
+      }
+    } else {
+      // Full FormData update (from product form)
+      console.log("📥 Received FormData for Master Product update");
+      isFormDataUpdate = true;
+      const formData = await request.formData();
+      const productDataString = formData.get("data");
+      updateData = productDataString ? JSON.parse(productDataString) : {};
+      // Store formData for later file processing
+      updateData._formData = formData;
+
+      console.log("📝 Form update data:", {
+        product_name: updateData.product_name,
+        category_id: updateData.category_id,
+        brand_id: updateData.brand_id,
+        status: updateData.status,
+        media_count: updateData.media?.length || 0,
+        has_policies: !!updateData.product_policies,
+        seo_title: updateData.seo_meta_title,
+      });
+    }
+
+    // --- FIX: Handle empty brand_id (only for form updates) ---
+    if (isFormDataUpdate && updateData.brand_id === "") {
       updateData.brand_id = null;
     }
 
-    // --- 1. Validation ---
+    // --- 1. Validation (only for form updates with category changes) ---
     if (
+      isFormDataUpdate &&
       updateData.category_id &&
       updateData.category_id !== existingProduct.category_id.toString()
     ) {
@@ -664,8 +702,9 @@ export async function PUT(request, { params }) {
       }
     }
 
-    // --- 2. Slug Update ---
+    // --- 2. Slug Update (only for form updates with name changes) ---
     if (
+      isFormDataUpdate &&
       updateData.product_name &&
       updateData.product_name !== existingProduct.product_name
     ) {
@@ -683,105 +722,90 @@ export async function PUT(request, { params }) {
       updateData.slug = slug;
     }
 
-    // --- 3. File Uploads & Management ---
-    const uploadDir = join(process.cwd(), "uploads", "temp");
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
+    // --- 3. File Uploads & Management (only for FormData updates) ---
+    if (isFormDataUpdate) {
+      const formData = updateData._formData;
+      delete updateData._formData; // Remove temporary reference
 
-    let currentMedia = existingProduct.media || [];
+      const uploadDir = join(process.cwd(), "uploads", "temp");
+      if (!existsSync(uploadDir)) {
+        await mkdir(uploadDir, { recursive: true });
+      }
 
-    try {
-      // 3a. Delete marked images
-      const deleteMediaUrls = JSON.parse(
-        formData.get("delete_media_urls") || "[]"
-      );
-      if (deleteMediaUrls.length > 0) {
-        console.log(
-          `🗑️ Deleting ${deleteMediaUrls.length} images from Cloudinary...`
+      // Start with the media array sent from frontend (what user wants to keep)
+      let currentMedia = updateData.media || existingProduct.media || [];
+
+      try {
+        // 3a. Delete marked images from Cloudinary
+        const deleteMediaUrls = JSON.parse(
+          formData.get("delete_media_urls") || "[]"
         );
-        for (const url of deleteMediaUrls) {
-          await deleteFromCloudinary(url).catch((err) =>
-            console.error("⚠️ Error deleting image:", err)
+        if (deleteMediaUrls.length > 0) {
+          console.log(
+            `🗑️ Deleting ${deleteMediaUrls.length} images from Cloudinary...`
+          );
+          for (const url of deleteMediaUrls) {
+            await deleteFromCloudinary(url).catch((err) =>
+              console.error("⚠️ Error deleting image:", err)
+            );
+          }
+          // Remove deleted images from current media array
+          currentMedia = currentMedia.filter(
+            (asset) => !deleteMediaUrls.includes(asset.url)
           );
         }
-        currentMedia = currentMedia.filter(
-          (asset) => !deleteMediaUrls.includes(asset.url)
-        );
-      }
 
-      // 3b. Upload new files
-      const newMediaFiles = formData.getAll("new_media_files");
-      if (newMediaFiles && newMediaFiles.length > 0) {
-        console.log(`☁️ Uploading ${newMediaFiles.length} new media files...`);
-        for (const file of newMediaFiles) {
-          if (file && file.size > 0) {
-            const bytes = await file.arrayBuffer();
-            const buffer = Buffer.from(bytes);
-            const tempPath = join(
-              uploadDir,
-              `master-media-${Date.now()}-${Math.random()
-                .toString(36)
-                .substr(2, 9)}${path.extname(file.name)}`
-            );
-            await writeFile(tempPath, buffer);
+        // 3b. Upload new files
+        const newMediaFiles = formData.getAll("new_media_files");
+        if (newMediaFiles && newMediaFiles.length > 0) {
+          console.log(
+            `☁️ Uploading ${newMediaFiles.length} new media files...`
+          );
+          for (const file of newMediaFiles) {
+            if (file && file.size > 0) {
+              const bytes = await file.arrayBuffer();
+              const buffer = Buffer.from(bytes);
+              const tempPath = join(
+                uploadDir,
+                `master-media-${Date.now()}-${Math.random()
+                  .toString(36)
+                  .substr(2, 9)}${path.extname(file.name)}`
+              );
+              await writeFile(tempPath, buffer);
 
-            const uploadResult = await uploadToCloudinary(
-              [{ path: tempPath, originalname: file.name }],
-              "products"
-            );
-            currentMedia.push({
-              url: uploadResult[0].secure_url,
-              is_primary: false,
-              type: "image",
-            });
+              const uploadResult = await uploadToCloudinary(
+                [{ path: tempPath, originalname: file.name }],
+                "products"
+              );
+              currentMedia.push({
+                url: uploadResult[0].secure_url,
+                is_primary: false,
+                type: "image",
+              });
+            }
           }
         }
-      }
 
-      // 3c. Ensure one image is primary
-      if (updateData.media) {
-        // If client is sending the full new media array order/primary status
-        // We merge the URLs from currentMedia (which has the new uploads) with the primary status from updateData
-        const updatedMediaMeta = updateData.media;
-
-        // Rebuild currentMedia to respect the order and primary status sent from frontend
-        // Note: This is simplified. A robust solution matches URLs.
-        // Since we pushed new files to currentMedia, we need to trust currentMedia's URLs but updateData's "is_primary" flags where possible.
-
-        // Simple approach: If the frontend sent media array, use it, but ensure we keep the new uploads we just added.
-        // Ideally, the frontend shouldn't send the file objects back in 'media', just the existing ones.
-
-        // Let's just append the NEWLY uploaded files to the end of the list the frontend sent back
-        // (The frontend 'media' array contains existing images. 'newMediaFiles' were just uploaded)
-
-        // Actually, we already pushed to currentMedia. Let's just ensure the primary flag is set correctly.
+        // 3c. Ensure one image is primary
         if (
           currentMedia.length > 0 &&
           !currentMedia.some((m) => m.is_primary)
         ) {
           currentMedia[0].is_primary = true;
         }
-      } else {
-        if (
-          currentMedia.length > 0 &&
-          !currentMedia.some((m) => m.is_primary)
-        ) {
-          currentMedia[0].is_primary = true;
-        }
-      }
 
-      updateData.media = currentMedia;
-    } catch (uploadError) {
-      console.error("❌ Upload error:", uploadError);
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Failed to process images",
-          error: uploadError.message,
-        },
-        { status: 500 }
-      );
+        updateData.media = currentMedia;
+      } catch (uploadError) {
+        console.error("❌ Upload error:", uploadError);
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Failed to process images",
+            error: uploadError.message,
+          },
+          { status: 500 }
+        );
+      }
     }
 
     // --- 4. Save Update ---
@@ -796,6 +820,14 @@ export async function PUT(request, { params }) {
       .populate("brand_id", "name");
 
     console.log("✅ Master Product updated successfully");
+    console.log("📊 Updated product details:", {
+      id: updatedProduct._id,
+      product_name: updatedProduct.product_name,
+      category: updatedProduct.category_id?.name,
+      brand: updatedProduct.brand_id?.name,
+      status: updatedProduct.status,
+      media_count: updatedProduct.media?.length || 0,
+    });
 
     return NextResponse.json({
       success: true,

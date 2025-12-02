@@ -5,7 +5,10 @@ import { RiArrowDownSFill, RiArrowUpSFill, RiLock2Line } from "react-icons/ri";
 import { Rating } from "react-simple-star-rating";
 import { Input, Table } from "reactstrap";
 import SettingContext from "../../helper/settingContext";
-import { dateFormat, dateWithOnlyMonth } from "../../utils/customFunctions/DateFormat";
+import {
+  dateFormat,
+  dateWithOnlyMonth,
+} from "../../utils/customFunctions/DateFormat";
 import usePermissionCheck from "../../utils/hooks/usePermissionCheck";
 import Avatar from "../commonComponent/Avatar";
 import NoDataFound from "../commonComponent/NoDataFound";
@@ -13,21 +16,41 @@ import Options from "./Options";
 import Status from "./Status";
 import TableLoader from "./TableLoader";
 
-const ShowTable = ({ current_page, per_page, mutate, isCheck, setIsCheck, url, sortBy, setSortBy, headerData, fetchStatus, moduleName, type, redirectLink, refetch, keyInPermission, link, editPermission, destroyPermission }) => {
+const ShowTable = ({
+  current_page,
+  per_page,
+  mutate,
+  isCheck,
+  setIsCheck,
+  url,
+  sortBy,
+  setSortBy,
+  headerData,
+  fetchStatus,
+  moduleName,
+  type,
+  redirectLink,
+  refetch,
+  keyInPermission,
+  link,
+  editPermission,
+  destroyPermission,
+}) => {
   const { t } = useTranslation("common");
   const { convertCurrency } = useContext(SettingContext);
   const [defaultEdit, defaultDestroy] = usePermissionCheck(["edit", "destroy"]);
   const [colSpan, setColSpan] = useState();
-  
+
   // Use passed permissions if available, otherwise use default permissions
   const edit = editPermission !== undefined ? editPermission : defaultEdit;
-  const destroy = destroyPermission !== undefined ? destroyPermission : defaultDestroy;
-  
+  const destroy =
+    destroyPermission !== undefined ? destroyPermission : defaultDestroy;
+
   // Use refetch as mutate if mutate is not provided
   const mutateFn = mutate || refetch;
-  
+
   // Debug logging
-  console.log('ShowTable Debug:', {
+  console.log("ShowTable Debug:", {
     editPermission,
     destroyPermission,
     defaultEdit,
@@ -37,12 +60,13 @@ const ShowTable = ({ current_page, per_page, mutate, isCheck, setIsCheck, url, s
     moduleName,
     dataCount: headerData?.data,
     current_page,
-    per_page
-
+    per_page,
   });
-  
+
   const router = useRouter();
-  const originalDataLength = headerData?.data?.filter((elem) => elem.system_reserve == "1").length;
+  const originalDataLength = headerData?.data?.filter(
+    (elem) => elem.system_reserve == "1"
+  ).length;
   /* Select All Data */
   const handleChange = (result) => {
     if (isCheck?.includes(result.id)) {
@@ -53,7 +77,11 @@ const ShowTable = ({ current_page, per_page, mutate, isCheck, setIsCheck, url, s
   };
   /* Sorting Data */
   const handleSort = (title) => {
-    setSortBy({ ...sortBy, field: title, sort: `${sortBy.sort == "asc" ? "desc" : "asc"}` });
+    setSortBy({
+      ...sortBy,
+      field: title,
+      sort: `${sortBy.sort == "asc" ? "desc" : "asc"}`,
+    });
   };
   // Calculation For Row Head
   const countColSpan = () => {
@@ -74,7 +102,12 @@ const ShowTable = ({ current_page, per_page, mutate, isCheck, setIsCheck, url, s
       if (headerData?.optionHead?.type == "View") {
         redirectLink ? redirectLink(tableData) : "";
       } else if (tableData.system_reserve !== "1" && headerData?.isOption) {
-        tableData?.id && router.push(`/${link ? link.toLowerCase() : moduleName.toLowerCase()}/edit/${tableData.id}`);
+        tableData?.id &&
+          router.push(
+            `/${link ? link.toLowerCase() : moduleName.toLowerCase()}/edit/${
+              tableData.id
+            }`
+          );
       }
     }
   };
@@ -88,7 +121,12 @@ const ShowTable = ({ current_page, per_page, mutate, isCheck, setIsCheck, url, s
     }
   };
   return (
-    <Table id="table_id" className={`role-table ${headerData?.noCustomClass ? "" : "refund-table"} all-package theme-table datatable-wrapper`}>
+    <Table
+      id="table_id"
+      className={`role-table ${
+        headerData?.noCustomClass ? "" : "refund-table"
+      } all-package theme-table datatable-wrapper`}
+    >
       <TableLoader fetchStatus={fetchStatus} />
       <thead>
         <tr>
@@ -98,23 +136,54 @@ const ShowTable = ({ current_page, per_page, mutate, isCheck, setIsCheck, url, s
                 <Input
                   className="custom-control-input checkbox_animated"
                   type={"checkbox"}
-                  checked={headerData?.data?.length > 0 && isCheck?.length == headerData?.data?.length}
-                  disabled={originalDataLength == headerData?.data?.length ? true : false}
+                  checked={
+                    headerData?.data?.length > 0 &&
+                    isCheck?.length == headerData?.data?.length
+                  }
+                  disabled={
+                    originalDataLength == headerData?.data?.length
+                      ? true
+                      : false
+                  }
                   onChange={(e) => {
-                    e.target.checked ? setIsCheck([...headerData?.data?.map((item) => item.id)]) : setIsCheck([]);
+                    e.target.checked
+                      ? setIsCheck([
+                          ...headerData?.data?.map((item) => item.id),
+                        ])
+                      : setIsCheck([]);
                   }}
                 />
               </th>
             )}
-            {headerData.isSerialNo !== false && <th className="sm-width">{t("No")}</th>}
+            {headerData.isSerialNo !== false && (
+              <th className="sm-width">{t("No")}</th>
+            )}
             {/* Table Heading */}
             {headerData?.column.map((elem, i) => (
-              <th key={i} className={` ${elem?.type === "image" ? "sm-width" : ""} ${elem.class ? elem.class : ""}`} onClick={() => (elem.sorting ? handleSort(elem.apiKey) : false)}>
+              <th
+                key={i}
+                className={` ${elem?.type === "image" ? "sm-width" : ""} ${
+                  elem.class ? elem.class : ""
+                }`}
+                onClick={() => (elem.sorting ? handleSort(elem.apiKey) : false)}
+              >
                 {t(elem.title)}
-                {elem.sorting ? <div className="filter-arrow">{sortBy?.field == elem.apiKey && sortBy.sort == "desc" ? <RiArrowDownSFill /> : <RiArrowUpSFill />}</div> : ""}
+                {elem.sorting ? (
+                  <div className="filter-arrow">
+                    {sortBy?.field == elem.apiKey && sortBy.sort == "desc" ? (
+                      <RiArrowDownSFill />
+                    ) : (
+                      <RiArrowUpSFill />
+                    )}
+                  </div>
+                ) : (
+                  ""
+                )}
               </th>
             ))}
-            {headerData?.isOption && <th>{t(headerData?.optionHead?.title)}</th>}
+            {headerData?.isOption && (
+              <th>{t(headerData?.optionHead?.title)}</th>
+            )}
           </>
         </tr>
       </thead>
@@ -124,44 +193,115 @@ const ShowTable = ({ current_page, per_page, mutate, isCheck, setIsCheck, url, s
             <tr key={index}>
               {headerData?.checkBox && (
                 <td className="sm-width">
-                  <Input className="custom-control-input checkbox_animated" checked={headerData?.data?.[index]?.system_reserve !== "1" && isCheck?.includes(tableData?.id)} disabled={headerData?.data?.[index]?.system_reserve == "1" ? true : false} onChange={(e) => handleChange(tableData)} type={"checkbox"} />
+                  <Input
+                    className="custom-control-input checkbox_animated"
+                    checked={
+                      headerData?.data?.[index]?.system_reserve !== "1" &&
+                      isCheck?.includes(tableData?.id)
+                    }
+                    disabled={
+                      headerData?.data?.[index]?.system_reserve == "1"
+                        ? true
+                        : false
+                    }
+                    onChange={(e) => handleChange(tableData)}
+                    type={"checkbox"}
+                  />
                 </td>
               )}
               {headerData.isSerialNo !== false && (
-                <td className="sm-width" onClick={(e) => isHandelEdit(e, headerData, tableData)}>
+                <td
+                  className="sm-width"
+                  onClick={(e) => isHandelEdit(e, tableData, headerData)}
+                >
                   {index + 1 + (current_page - 1) * per_page}
                 </td>
               )}
               <>
                 {headerData?.column.map((item, i) => (
-                  <td className={item.type == "image" ? "sm-width" : ""} key={i} onClick={(e) => item.type !== "switch" && !headerData?.data?.[index]?.system_reserve == "1" && isHandelEdit(e, tableData, headerData)}>
+                  <td
+                    className={item.type == "image" ? "sm-width" : ""}
+                    key={i}
+                    onClick={(e) =>
+                      item.type !== "switch" &&
+                      !headerData?.data?.[index]?.system_reserve == "1" &&
+                      isHandelEdit(e, tableData, headerData)
+                    }
+                  >
                     {item.type == "dateWithOnlyMonth" ? (
                       dateWithOnlyMonth(tableData[item?.apiKey])
                     ) : item.type == "date" ? (
                       <>{dateFormat(tableData[item?.apiKey])}</>
                     ) : item.type == "image" ? (
-                      <Avatar imageClass="tbl-image" data={tableData[item?.apiKey]} placeHolder={item.placeHolderImage} name={tableData} NameWithRound={item.NameWithRound ? true : false} />
+                      <Avatar
+                        imageClass="tbl-image"
+                        data={tableData[item?.apiKey]}
+                        placeHolder={item.placeHolderImage}
+                        name={tableData}
+                        NameWithRound={item.NameWithRound ? true : false}
+                      />
                     ) : item.type == "price" ? (
                       <>{convertCurrency(tableData[item?.apiKey])}</>
                     ) : item.type == "rating" ? (
-                      <Rating initialValue={tableData.rating} readonly={true} size={20} fillColor="#0da487" />
+                      <Rating
+                        initialValue={tableData.rating}
+                        readonly={true}
+                        size={20}
+                        fillColor="#0da487"
+                      />
                     ) : item.type == "switch" ? (
-                      <>{!edit || headerData?.data?.[index].system_reserve == "1" ? <Status data={tableData} url={url} disabled={true} /> : <Status data={tableData} url={item.url ? item.url : url} apiKey={item.url && item.apiKey} />}</>
+                      <>
+                        {!edit ||
+                        headerData?.data?.[index].system_reserve == "1" ? (
+                          <Status data={tableData} url={url} disabled={true} />
+                        ) : (
+                          <Status
+                            data={tableData}
+                            url={item.url ? item.url : url}
+                            apiKey={item.url && item.apiKey}
+                          />
+                        )}
+                      </>
                     ) : item.type == "stock_status" ? (
                       <>
                         <div className={`status-${tableData[item?.apiKey]}`}>
-                          <span>{tableData[item?.apiKey]?.toString().includes("_") ? tableData[item?.apiKey]?.replace(/_/g, " ") : " "}</span>
+                          <span>
+                            {tableData[item?.apiKey]?.toString().includes("_")
+                              ? tableData[item?.apiKey]?.replace(/_/g, " ")
+                              : " "}
+                          </span>
                         </div>
                       </>
                     ) : item?.subKey ? (
-                      <>{getSubKeysData(tableData[item?.apiKey], item?.subKey)}</>
+                      <>
+                        {getSubKeysData(tableData[item?.apiKey], item?.subKey)}
+                      </>
                     ) : (
                       <>{tableData[item?.apiKey]}</>
                     )}
                   </td>
                 ))}
               </>
-              {headerData?.isOption && <td>{headerData?.data?.[index]?.system_reserve == "1" ? <RiLock2Line /> : <Options fullObj={tableData} mutate={mutateFn} moduleName={moduleName} type={type} optionPermission={headerData} refetch={refetch} keyInPermission={keyInPermission} edit={edit} destroy={destroy} />}</td>}
+              {headerData?.isOption && (
+                <td>
+                  {headerData?.data?.[index]?.system_reserve == "1" ? (
+                    <RiLock2Line />
+                  ) : (
+                    // Pass a sanitized permission object so row noEdit does not hide the edit icon
+                    <Options
+                      fullObj={tableData}
+                      mutate={mutateFn}
+                      moduleName={moduleName}
+                      type={type}
+                      optionPermission={{ ...headerData, noEdit: false }}
+                      refetch={refetch}
+                      keyInPermission={keyInPermission}
+                      edit={edit}
+                      destroy={destroy}
+                    />
+                  )}
+                </td>
+              )}
             </tr>
           ))
         ) : (

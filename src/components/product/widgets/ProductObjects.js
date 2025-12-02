@@ -40,11 +40,48 @@ export function ProductInitValues(oldData, updateId) {
     updateId,
   });
 
+  // Extract the actual IDs from populated fields if they exist
+  const getCategoryId = () => {
+    if (!updateId || !oldData?.category_id) return "";
+    // If category_id is already a string ID, use it directly
+    if (typeof oldData.category_id === "string") return oldData.category_id;
+    // If it's a populated object, extract the _id
+    return oldData.category_id?._id || "";
+  };
+
+  const getBrandId = () => {
+    if (!updateId || !oldData?.brand_id) return "";
+    // If brand_id is already a string ID, use it directly
+    if (typeof oldData.brand_id === "string") return oldData.brand_id;
+    // If it's a populated object, extract the _id or id
+    return oldData.brand_id?._id || oldData.brand_id?.id || "";
+  };
+
+  // Ensure product_policies has all required fields
+  const defaultPolicies = {
+    about_this_item: "",
+    key_features: [],
+    return_policy: "",
+    refund_policy: "",
+    warranty_info: "",
+  };
+
+  const productPolicies =
+    updateId && oldData?.product_policies
+      ? {
+          about_this_item: oldData.product_policies.about_this_item || "",
+          key_features: oldData.product_policies.key_features || [],
+          return_policy: oldData.product_policies.return_policy || "",
+          refund_policy: oldData.product_policies.refund_policy || "",
+          warranty_info: oldData.product_policies.warranty_info || "",
+        }
+      : defaultPolicies;
+
   const finalValues = {
     // Core Details
     product_name: updateId ? oldData?.product_name || "" : "",
-    category_id: updateId ? oldData?.category_id || "" : "",
-    brand_id: updateId ? oldData?.brand_id || "" : "",
+    category_id: getCategoryId(),
+    brand_id: getBrandId(),
     status: updateId ? oldData?.status || "inactive" : "inactive",
 
     // Media
@@ -53,15 +90,7 @@ export function ProductInitValues(oldData, updateId) {
     delete_media_urls: [],
 
     // Product Policies (Deliverable 4)
-    product_policies: updateId
-      ? oldData?.product_policies || {}
-      : {
-          about_this_item: "",
-          key_features: [],
-          return_policy: "",
-          refund_policy: "",
-          warranty_info: "",
-        },
+    product_policies: productPolicies,
 
     // Taxonomy Mappings (Deliverable 3 link)
     attribute_values: updateId ? oldData?.attribute_values || [] : [],

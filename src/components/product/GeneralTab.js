@@ -165,14 +165,20 @@ const GeneralTab = ({ values, setFieldValue, updateId }) => {
       />
 
       {/* New Category Selector (links to taxonomy) */}
-      <MultiSelectField
-        name="category_id"
-        title="Category"
-        require="true"
-        values={values}
-        setFieldValue={setFieldValue}
-        data={categoryData || []}
-        getValuesKey="id"
+      <SearchableSelectInput
+        nameList={[
+          {
+            name: "category_id",
+            title: "Category",
+            require: "true",
+            inputprops: {
+              name: "category_id",
+              id: "category_id",
+              options: categoryData || [],
+              initialTittle: "SelectCategory",
+            },
+          },
+        ]}
       />
 
       {/* Brand Selector */}
