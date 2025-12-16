@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: false,
   experimental: {
-    turbo: false,
+    turbo: false, // Disable Turbopack - causes CSS parsing issues with SCSS
   },
   env: {
     // Replace below URL with your current Domain
