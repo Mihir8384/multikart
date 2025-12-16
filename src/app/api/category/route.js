@@ -161,7 +161,7 @@ export async function GET(request) {
       categories = await Category.aggregate(pipeline);
     }
 
-    return NextResponse.json({
+    const jsonResponse = NextResponse.json({
       success: true,
       message: "Categories fetched successfully",
       data: categories,
@@ -172,9 +172,16 @@ export async function GET(request) {
         totalPages: Math.ceil(total / limit),
       },
     });
+
+    // Add CORS headers for client site access
+    jsonResponse.headers.set("Access-Control-Allow-Origin", "*");
+    jsonResponse.headers.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+    jsonResponse.headers.set("Access-Control-Allow-Headers", "Content-Type");
+
+    return jsonResponse;
   } catch (error) {
     console.error("Error fetching categories:", error);
-    return NextResponse.json(
+    const errorResponse = NextResponse.json(
       {
         success: false,
         message: "Failed to fetch categories",
@@ -182,7 +189,31 @@ export async function GET(request) {
       },
       { status: 500 }
     );
+
+    // Add CORS headers to error response too
+    errorResponse.headers.set("Access-Control-Allow-Origin", "*");
+    errorResponse.headers.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+    errorResponse.headers.set("Access-Control-Allow-Headers", "Content-Type");
+
+    return errorResponse;
   }
+}
+
+/**
+ * OPTIONS handler for CORS preflight requests
+ */
+export async function OPTIONS(request) {
+  const response = new NextResponse(null, { status: 200 });
+  response.headers.set("Access-Control-Allow-Origin", "*");
+  response.headers.set(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE, OPTIONS"
+  );
+  response.headers.set(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization"
+  );
+  return response;
 }
 
 // ===============================================

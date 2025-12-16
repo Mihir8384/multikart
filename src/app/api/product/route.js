@@ -11,6 +11,7 @@ import {
 
 /**
  * GET /api/product - Get all MASTER products
+ * NOTE: Public access allowed for client-side product display
  */
 export async function GET(request) {
   try {
@@ -21,10 +22,12 @@ export async function GET(request) {
     // if (!authCheck.success) {
     //   return authCheck.errorResponse;
     // }
-    const authCheck = await requireAuth(request);
-    if (!authCheck.success) {
-      return authCheck.errorResponse;
-    }
+
+    // Allow public access for product listing (needed for client site)
+    // const authCheck = await requireAuth(request);
+    // if (!authCheck.success) {
+    //   return authCheck.errorResponse;
+    // }
 
     const searchParams = request?.nextUrl?.searchParams;
     const querySearch = searchParams.get("search");
@@ -61,10 +64,16 @@ export async function GET(request) {
       data: products,
     };
 
-    return NextResponse.json(response);
+    // Add CORS headers for client site access
+    const jsonResponse = NextResponse.json(response);
+    jsonResponse.headers.set("Access-Control-Allow-Origin", "*");
+    jsonResponse.headers.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+    jsonResponse.headers.set("Access-Control-Allow-Headers", "Content-Type");
+
+    return jsonResponse;
   } catch (error) {
     console.log("Master Product GET error:", error);
-    return NextResponse.json(
+    const errorResponse = NextResponse.json(
       {
         success: false,
         message: "Failed to fetch master products",
@@ -72,7 +81,31 @@ export async function GET(request) {
       },
       { status: 500 }
     );
+
+    // Add CORS headers to error response too
+    errorResponse.headers.set("Access-Control-Allow-Origin", "*");
+    errorResponse.headers.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+    errorResponse.headers.set("Access-Control-Allow-Headers", "Content-Type");
+
+    return errorResponse;
   }
+}
+
+/**
+ * OPTIONS handler for CORS preflight requests
+ */
+export async function OPTIONS(request) {
+  const response = new NextResponse(null, { status: 200 });
+  response.headers.set("Access-Control-Allow-Origin", "*");
+  response.headers.set(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE, OPTIONS"
+  );
+  response.headers.set(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization"
+  );
+  return response;
 }
 
 /**
