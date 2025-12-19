@@ -1,17 +1,20 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
+  experimental: {
+    turbo: false,
+  },
   env: {
-    // Replace below URL with your current Domain 
+    // Replace below URL with your current Domain
     API_PROD_URL: process.env.API_PROD_URL,
-    storageURL: process.env.STORAGE_URL, 
+    storageURL: process.env.STORAGE_URL,
   },
   redirects: async () => {
     return [
       {
         source: "/",
         destination: "/dashboard",
-        permanent: true,  
+        permanent: true,
       },
       {
         source: "/en",
@@ -41,7 +44,7 @@ const nextConfig = {
         port: "",
       },
     ],
-  }
+  },
 };
 
 module.exports = nextConfig;

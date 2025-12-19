@@ -20,7 +20,10 @@ export async function GET(request) {
       searchParams.get("include_subcategories") === "true";
     const is_leaf = searchParams.get("is_leaf");
 
-    // REQUIREMENT 5: Optimized Efficient Logic for Tree View
+    let categories;
+    let total;
+
+    // --- REQUIREMENT 5: Optimized Tree View Logic ---
     if (include_subcategories) {
       // Fetch all categories for this type in one go (fastest)
       const allCategories = await Category.find({ type })
@@ -44,7 +47,7 @@ export async function GET(request) {
           }));
       };
 
-      let categories = buildTree();
+      categories = buildTree();
 
       // REQUIREMENT 1: Search and auto-expand logic
       if (search) {
@@ -65,59 +68,59 @@ export async function GET(request) {
         };
         categories = filterBySearch(categories);
       }
+      total = categories.length;
+    } else {
+      // --- Standard Flat List Logic for Table View ---
+      let query = { type };
+      if (search) query.name = { $regex: search, $options: "i" };
+      if (status !== null && status !== undefined && status !== "") {
+        query.status = parseInt(status);
+      }
+      if (is_leaf === "true") query.is_leaf = true;
+      else if (is_leaf === "false") query.is_leaf = false;
 
-      return NextResponse.json({
-        success: true,
-        data: categories,
-      });
+      total = await Category.countDocuments(query);
+      const skip = (page - 1) * limit;
+
+      // Use Aggregation for flat list to get subcategory counts efficiently
+      categories = await Category.aggregate([
+        { $match: query },
+        { $sort: { created_at: -1 } },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $lookup: {
+            from: "categories",
+            localField: "parent_id",
+            foreignField: "_id",
+            as: "parent_category",
+          },
+        },
+        {
+          $unwind: {
+            path: "$parent_category",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $lookup: {
+            from: "categories",
+            localField: "_id",
+            foreignField: "parent_id",
+            as: "subs",
+          },
+        },
+        {
+          $addFields: {
+            subcategories_count: { $size: "$subs" },
+            id: "$_id",
+          },
+        },
+        { $project: { subs: 0 } },
+      ]);
     }
 
-    // Standard Flat List Logic for Table View
-    let query = { type };
-    if (search) query.name = { $regex: search, $options: "i" };
-    if (status !== null && status !== undefined && status !== "")
-      query.status = parseInt(status);
-    if (is_leaf === "true") query.is_leaf = true;
-    else if (is_leaf === "false") query.is_leaf = false;
-
-    const total = await Category.countDocuments(query);
-    const skip = (page - 1) * limit;
-
-    // Use Aggregation for flat list to get subcategory counts efficiently
-    const categories = await Category.aggregate([
-      { $match: query },
-      { $sort: { created_at: -1 } },
-      { $skip: skip },
-      { $limit: limit },
-      {
-        $lookup: {
-          from: "categories",
-          localField: "parent_id",
-          foreignField: "_id",
-          as: "parent_category",
-        },
-      },
-      {
-        $unwind: { path: "$parent_category", preserveNullAndEmptyArrays: true },
-      },
-      {
-        $lookup: {
-          from: "categories",
-          localField: "_id",
-          foreignField: "parent_id",
-          as: "subs",
-        },
-      },
-      {
-        $addFields: {
-          subcategories_count: { $size: "$subs" },
-          id: "$_id",
-        },
-      },
-      { $project: { subs: 0 } },
-    ]);
-
-    return NextResponse.json({
+    const jsonResponse = NextResponse.json({
       success: true,
       data: categories,
       pagination: {
@@ -127,20 +130,46 @@ export async function GET(request) {
         totalPages: Math.ceil(total / limit),
       },
     });
+
+    // Add CORS headers for client site access
+    jsonResponse.headers.set("Access-Control-Allow-Origin", "*");
+    jsonResponse.headers.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+    jsonResponse.headers.set("Access-Control-Allow-Headers", "Content-Type");
+
+    return jsonResponse;
   } catch (error) {
     console.error("Error fetching categories:", error);
-    return NextResponse.json(
+    const errorResponse = NextResponse.json(
       { success: false, message: error.message },
       { status: 500 }
     );
+
+    errorResponse.headers.set("Access-Control-Allow-Origin", "*");
+    return errorResponse;
   }
+}
+
+/**
+ * OPTIONS handler for CORS preflight requests
+ */
+export async function OPTIONS(request) {
+  const response = new NextResponse(null, { status: 200 });
+  response.headers.set("Access-Control-Allow-Origin", "*");
+  response.headers.set(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE, OPTIONS"
+  );
+  response.headers.set(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization"
+  );
+  return response;
 }
 
 // ===============================================
 // POST - Create new category
 // ===============================================
 export async function POST(request) {
-  console.log("=== CATEGORY POST API CALLED ===");
   try {
     await dbConnect();
     const authCheck = await requireAdmin(request);
@@ -160,14 +189,12 @@ export async function POST(request) {
       );
     }
 
-    // Slug generation
     const slug = name
       .toLowerCase()
       .replace(/[^a-z0-9]/g, "-")
       .replace(/-+/g, "-")
       .trim("-");
 
-    // Mapping Sanitization
     const attributeMappingData = JSON.parse(
       formData.get("attribute_mapping") || "[]"
     );

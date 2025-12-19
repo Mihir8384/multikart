@@ -20,6 +20,18 @@ export async function middleware(request) {
     return NextResponse.next();
   }
 
+  // Skip authentication for public product API (GET requests only for client site)
+  if (pathname === "/api/product" && request.method === "GET") {
+    console.log("Skipping auth for public product listing (GET):", pathname);
+    return NextResponse.next();
+  }
+
+  // Skip authentication for public category API (GET requests only for client site)
+  if (pathname === "/api/category" && request.method === "GET") {
+    console.log("Skipping auth for public category listing (GET):", pathname);
+    return NextResponse.next();
+  }
+
   // Skip authentication for static files
   if (
     pathname.startsWith("/_next/") ||
