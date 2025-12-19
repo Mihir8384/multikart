@@ -3,7 +3,7 @@ import ShowTable from "../table/ShowTable";
 import usePermissionCheck from "../../utils/hooks/usePermissionCheck";
 import Loader from "../commonComponent/Loader";
 import { useTranslation } from "react-i18next";
-import { variant } from "../../utils/axiosUtils/API"; // Ensure this import is correct
+import { VariantAPI } from "../../utils/axiosUtils/API"; // Ensure this import is correct
 
 const AllVariantsTable = ({ data, ...props }) => {
   const { t } = useTranslation("common");
@@ -92,7 +92,7 @@ const AllVariantsTable = ({ data, ...props }) => {
         editPermission={edit}
         destroyPermission={destroy}
         filterHeader={filterHeader}
-        url={variant} // Connects the table to the Variant API
+        url={VariantAPI} // Connects the table to the Variant API
         keyInPermission={"variant"}
       />
     </>

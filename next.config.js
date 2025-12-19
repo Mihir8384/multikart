@@ -1,9 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
-  experimental: {
-    turbo: false,
-  },
   env: {
     // Replace below URL with your current Domain
     API_PROD_URL: process.env.API_PROD_URL,

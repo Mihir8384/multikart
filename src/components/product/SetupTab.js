@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Col, Row, Label } from "reactstrap";
 import CheckBoxField from "../inputFields/CheckBoxField.js";
 import request from "../../utils/axiosUtils/index.js";
-import { product, category, tag } from "../../utils/axiosUtils/API.js";
+import { product, Category, tag } from "../../utils/axiosUtils/API.js";
 import SearchableSelectInput from "../inputFields/SearchableSelectInput.js";
 import useCustomQuery from "@/utils/hooks/useCustomQuery.js";
 
@@ -45,10 +45,10 @@ const SetupTab = ({ values, setFieldValue, errors, updateId }) => {
 
   // --- 1. Fetch Categories (Fixed Data Selector) ---
   const { data: categoryData } = useCustomQuery(
-    [category],
+    [Category],
     () =>
       request(
-        { url: category, params: { status: "active", type: "product" } },
+        { url: Category, params: { status: "active", type: "product" } },
         router
       ),
     {
