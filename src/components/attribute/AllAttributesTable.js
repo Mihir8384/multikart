@@ -2,14 +2,46 @@ import TableWrapper from "../../utils/hoc/TableWrapper";
 import ShowTable from "../table/ShowTable";
 import usePermissionCheck from "../../utils/hooks/usePermissionCheck";
 import Loader from "../commonComponent/Loader";
+import { attribute } from "../../utils/axiosUtils/API";
 
 const AllAttributesTable = ({ data, ...props }) => {
   const [edit, destroy] = usePermissionCheck(["edit", "destroy"]);
-  console.log("Permissions in attributes - Edit:", edit, "Destroy:", destroy);
-  console.log("Attributes Data:", data);
+
+  // --- Filter Configuration ---
+  const filterHeader = {
+    useSpecific: false,
+    filter: [
+      {
+        name: "status",
+        title: "Status",
+        type: "select",
+        // Hardcoded options for Status
+        options: [
+          { id: "1", name: "Active" },
+          { id: "0", name: "Inactive" },
+        ],
+        key: "id",
+        value: "name",
+      },
+      {
+        name: "style",
+        title: "Style",
+        type: "select",
+        // Hardcoded options for Style
+        options: [
+          { id: "dropdown", name: "Dropdown" },
+          { id: "radio", name: "Radio" },
+          { id: "color", name: "Color" },
+          { id: "image", name: "Image" },
+        ],
+        key: "id",
+        value: "name",
+      },
+    ],
+  };
 
   const headerObj = {
-    checkBox: false,
+    checkBox: true, // Enable Multi-Selection (Checkbox)
     isSerialNo: true,
     isOption: edit == false && destroy == false ? false : true,
     noEdit: edit ? false : true,
@@ -42,6 +74,9 @@ const AllAttributesTable = ({ data, ...props }) => {
         headerData={headerObj}
         editPermission={edit}
         destroyPermission={destroy}
+        filterHeader={filterHeader} // Pass Filter Config
+        url={attribute} // Pass API URL for Delete/Status actions
+        keyInPermission={"attribute"}
       />
     </>
   );

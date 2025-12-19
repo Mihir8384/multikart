@@ -1,17 +1,11 @@
 import dbConnect from "@/lib/dbConnect";
 import Category from "@/models/Category";
 import { NextResponse } from "next/server";
-import {
-  uploadToCloudinary,
-  deleteFromCloudinary,
-} from "@/utils/cloudinary/cloudinaryService";
-import path from "path";
 import { requireAdmin } from "@/utils/auth/serverAuth";
 
 // ===============================================
-// GET - Fetch all categories with filtering
+// GET - Fetch all categories with optimized tree logic
 // ===============================================
-
 export async function GET(request) {
   try {
     await dbConnect();
@@ -22,148 +16,109 @@ export async function GET(request) {
     const search = searchParams.get("search") || "";
     const type = searchParams.get("type") || "product";
     const status = searchParams.get("status");
-    const parent_id = searchParams.get("parent_id");
     const include_subcategories =
       searchParams.get("include_subcategories") === "true";
-
-    // --- NEW FILTER ---
     const is_leaf = searchParams.get("is_leaf");
 
-    const skip = (page - 1) * limit;
-
-    // Build query
-    let query = { type };
-
-    if (search) {
-      query.name = { $regex: search, $options: "i" };
-    }
-
-    if (status !== null && status !== undefined && status !== "") {
-      query.status = parseInt(status);
-    }
-
-    // --- NEW FILTER LOGIC ---
-    if (is_leaf === "true") {
-      query.is_leaf = true;
-    } else if (is_leaf === "false") {
-      query.is_leaf = false;
-    }
-
-    // Filter by parent category (only if we're not searching for leaves specifically)
-    if (!is_leaf) {
-      if (parent_id === "null" || parent_id === "") {
-        query.parent_id = null; // Root categories only
-      } else if (parent_id) {
-        query.parent_id = parent_id;
-      }
-    }
-
-    // Get total count for pagination
-    const total = await Category.countDocuments(query);
-
-    let categories;
-
-    // --- AGGREGATION PIPELINE (Tree/Flat List Logic Remains the Same) ---
-    if (include_subcategories && (parent_id === "null" || parent_id === "")) {
-      // Logic for fetching all categories and building tree structure
+    // REQUIREMENT 5: Optimized Efficient Logic for Tree View
+    if (include_subcategories) {
+      // Fetch all categories for this type in one go (fastest)
       const allCategories = await Category.find({ type })
-        .sort({ created_at: -1 })
+        .sort({ level: 1 })
         .lean();
 
+      // Recursive function to build tree
       const buildTree = (parentId = null) => {
         return allCategories
           .filter((cat) => {
-            if (parentId === null)
-              return cat.parent_id === null || cat.parent_id === undefined;
-            return (
-              cat.parent_id && cat.parent_id.toString() === parentId.toString()
-            );
+            const catParentId = cat.parent_id ? cat.parent_id.toString() : null;
+            const targetParentId = parentId ? parentId.toString() : null;
+            return catParentId === targetParentId;
           })
           .map((cat) => ({
             ...cat,
+            id: cat._id.toString(),
+            // REQUIREMENT 3: Return item counts
+            product_count: cat.product_count || 0,
             subcategories: buildTree(cat._id),
           }));
       };
 
-      categories = buildTree();
+      let categories = buildTree();
 
-      // Apply search filter if provided
+      // REQUIREMENT 1: Search and auto-expand logic
       if (search) {
         const filterBySearch = (cats) => {
           return cats.filter((cat) => {
             const matchesSearch = cat.name
               .toLowerCase()
               .includes(search.toLowerCase());
-            const hasMatchingSubcategories =
-              cat.subcategories && cat.subcategories.length > 0;
+            const filteredSub = filterBySearch(cat.subcategories || []);
 
-            if (hasMatchingSubcategories) {
-              cat.subcategories = filterBySearch(cat.subcategories);
+            // If a child matches, we keep the parent (this causes auto-expansion in frontend)
+            if (filteredSub.length > 0) {
+              cat.subcategories = filteredSub;
+              return true;
             }
-
-            return (
-              matchesSearch ||
-              (cat.subcategories && cat.subcategories.length > 0)
-            );
+            return matchesSearch;
           });
         };
-
         categories = filterBySearch(categories);
       }
-    } else {
-      // Regular flat list with aggregation pipeline
-      let pipeline = [{ $match: query }, { $sort: { created_at: -1 } }];
 
-      if (page && limit && !include_subcategories) {
-        pipeline.push({ $skip: skip }, { $limit: limit });
-      }
-
-      // Populate parent category info
-      pipeline.push(
-        {
-          $lookup: {
-            from: "categories",
-            localField: "parent_id",
-            foreignField: "_id",
-            as: "parent_category",
-          },
-        },
-        {
-          $unwind: {
-            path: "$parent_category",
-            preserveNullAndEmptyArrays: true,
-          },
-        }
-      );
-
-      // Add subcategories count
-      pipeline.push(
-        {
-          $lookup: {
-            from: "categories",
-            localField: "_id",
-            foreignField: "parent_id",
-            as: "subcategories",
-          },
-        },
-        {
-          $addFields: {
-            subcategories_count: { $size: "$subcategories" },
-          },
-        },
-        {
-          $project: {
-            subcategories: 0,
-          },
-        }
-      );
-
-      categories = await Category.aggregate(pipeline);
+      return NextResponse.json({
+        success: true,
+        data: categories,
+      });
     }
+
+    // Standard Flat List Logic for Table View
+    let query = { type };
+    if (search) query.name = { $regex: search, $options: "i" };
+    if (status !== null && status !== undefined && status !== "")
+      query.status = parseInt(status);
+    if (is_leaf === "true") query.is_leaf = true;
+    else if (is_leaf === "false") query.is_leaf = false;
+
+    const total = await Category.countDocuments(query);
+    const skip = (page - 1) * limit;
+
+    // Use Aggregation for flat list to get subcategory counts efficiently
+    const categories = await Category.aggregate([
+      { $match: query },
+      { $sort: { created_at: -1 } },
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "parent_id",
+          foreignField: "_id",
+          as: "parent_category",
+        },
+      },
+      {
+        $unwind: { path: "$parent_category", preserveNullAndEmptyArrays: true },
+      },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "_id",
+          foreignField: "parent_id",
+          as: "subs",
+        },
+      },
+      {
+        $addFields: {
+          subcategories_count: { $size: "$subs" },
+          id: "$_id",
+        },
+      },
+      { $project: { subs: 0 } },
+    ]);
 
     return NextResponse.json({
       success: true,
-      message: "Categories fetched successfully",
       data: categories,
       pagination: {
         page,
@@ -175,11 +130,7 @@ export async function GET(request) {
   } catch (error) {
     console.error("Error fetching categories:", error);
     return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to fetch categories",
-        error: error.message,
-      },
+      { success: false, message: error.message },
       { status: 500 }
     );
   }
@@ -188,59 +139,20 @@ export async function GET(request) {
 // ===============================================
 // POST - Create new category
 // ===============================================
-
 export async function POST(request) {
   console.log("=== CATEGORY POST API CALLED ===");
   try {
     await dbConnect();
-
     const authCheck = await requireAdmin(request);
-    if (!authCheck.success) {
-      return authCheck.errorResponse;
-    }
+    if (!authCheck.success) return authCheck.errorResponse;
 
     const formData = await request.formData();
-
     const name = formData.get("name");
     const display_name = formData.get("display_name") || name;
-    const description = formData.get("description") || "";
     const type = formData.get("type") || "product";
     const parent_id = formData.get("parent_id") || null;
-    const commission_rate = formData.get("commission_rate") || null;
     const status = formData.get("status") === "true" ? 1 : 0;
-    const meta_title = formData.get("meta_title") || "";
-    const meta_description = formData.get("meta_description") || "";
 
-    const attributeMappingData = formData.get("attribute_mapping") || "[]";
-    const variantMappingData = formData.get("variant_mapping") || "[]";
-
-    let parsedAttributeMapping = [];
-    let parsedVariantMapping = [];
-
-    try {
-      parsedAttributeMapping = JSON.parse(attributeMappingData);
-    } catch (e) {
-      console.warn("Invalid attribute_mapping JSON:", attributeMappingData);
-    }
-
-    try {
-      parsedVariantMapping = JSON.parse(variantMappingData);
-    } catch (e) {
-      console.warn("Invalid variant_mapping JSON:", variantMappingData);
-    }
-
-    // --- FINAL MAPPING CLEANUP FIX ---
-    // Filter out any entries where the ID field is empty or null, which causes the ObjectId cast error.
-    parsedAttributeMapping = parsedAttributeMapping.filter(
-      (mapping) => mapping.attribute_id && mapping.attribute_id !== ""
-    );
-
-    parsedVariantMapping = parsedVariantMapping.filter(
-      (mapping) => mapping.variant_id && mapping.variant_id !== ""
-    );
-    // --- END OF FIX ---
-
-    // Validation
     if (!name) {
       return NextResponse.json(
         { success: false, message: "Category name is required" },
@@ -248,39 +160,45 @@ export async function POST(request) {
       );
     }
 
-    // --- (Slug generation and image upload logic is omitted here for brevity but assumed to be present) ---
+    // Slug generation
+    const slug = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "-")
+      .replace(/-+/g, "-")
+      .trim("-");
 
-    // PLACEHOLDER FOR IMAGE UPLOAD LOGIC
-    const category_image_url = null;
-    const category_icon_url = null;
-    const category_meta_image_url = null;
+    // Mapping Sanitization
+    const attributeMappingData = JSON.parse(
+      formData.get("attribute_mapping") || "[]"
+    );
+    const variantMappingData = JSON.parse(
+      formData.get("variant_mapping") || "[]"
+    );
+
+    const parsedAttributeMapping = attributeMappingData.filter(
+      (m) => m.attribute_id && m.attribute_id !== ""
+    );
+    const parsedVariantMapping = variantMappingData.filter(
+      (m) => m.variant_id && m.variant_id !== ""
+    );
 
     const newCategory = new Category({
       name,
       display_name,
-      slug: name
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, "-")
-        .replace(/-+/g, "-")
-        .trim("-"), // Simplified slug logic
-      description,
+      slug: `${slug}-${Date.now()}`,
+      description: formData.get("description") || "",
       type,
       parent_id: parent_id || null,
-      commission_rate: commission_rate || null,
+      commission_rate: formData.get("commission_rate") || null,
       status,
-      category_image: category_image_url,
-      category_icon: category_icon_url,
-      meta_title: meta_title || null,
-      meta_description: meta_description || null,
-      category_meta_image: category_meta_image_url,
+      meta_title: formData.get("meta_title") || "",
+      meta_description: formData.get("meta_description") || "",
       attribute_mapping: parsedAttributeMapping,
       variant_mapping: parsedVariantMapping,
       created_by: authCheck.authData.userId,
     });
 
     const savedCategory = await newCategory.save();
-    await savedCategory.populate("parent_id");
-
     return NextResponse.json(
       {
         success: true,
@@ -292,11 +210,7 @@ export async function POST(request) {
   } catch (error) {
     console.log("❌ Error creating category:", error);
     return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to create category",
-        error: error.message,
-      },
+      { success: false, message: error.message },
       { status: 500 }
     );
   }

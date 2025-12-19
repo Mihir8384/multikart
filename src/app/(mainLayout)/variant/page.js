@@ -1,42 +1,40 @@
 "use client";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Col, Row, Button } from "reactstrap";
-import { FiPlus } from "react-icons/fi";
-import { VariantAPI } from "@/utils/axiosUtils/API";
-import AllVariantsTable from "@/components/variant/AllVariantsTable"; // Correct import
+import { Col } from "reactstrap";
+import { useTranslation } from "react-i18next";
+import Btn from "@/elements/buttons/Btn";
+import { VariantAPI } from "@/utils/axiosUtils/API"; // Using the correct Uppercase export
+import AllVariantsTable from "@/components/variant/AllVariantsTable";
 
 const VariantList = () => {
   const [isCheck, setIsCheck] = useState([]);
   const router = useRouter();
-
-  const handleCreateVariant = () => {
-    router.push("/variant/create");
-  };
+  const { t } = useTranslation("common");
 
   return (
     <Col sm="12">
-      <Row className="mb-3">
-        <Col className="d-flex justify-content-end">
-          <Button
-            className="align-items-center btn-theme add-button"
-            color="primary"
-            onClick={handleCreateVariant}
-          >
-            <FiPlus className="me-2" />
-            Add Variant
-          </Button>
-        </Col>
-      </Row>
+      <div className="title-header option-title">
+        <h5>{t("Variants")}</h5>
+        <div className="right-options">
+          <ul>
+            <li>
+              <Btn
+                className="btn-primary"
+                onClick={() => router.push("/variant/create")}
+              >
+                <i className="ri-add-line"></i> {t("AddVariant")}
+              </Btn>
+            </li>
+          </ul>
+        </div>
+      </div>
+      {/* Pass VariantAPI here */}
       <AllVariantsTable
-        url={VariantAPI} // Pass the API URL
+        url={VariantAPI}
         moduleName="Variant"
         isCheck={isCheck}
         setIsCheck={setIsCheck}
-        type={"product"}
-        // Add any other props your TableWrapper expects, like import/export
-        // exportButton={true}
-        // importExport={{ ... }}
       />
     </Col>
   );

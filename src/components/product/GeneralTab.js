@@ -1,117 +1,23 @@
-// import React, { useContext } from "react";
-// import request from "../../utils/axiosUtils";
-// import { tax } from "../../utils/axiosUtils/API";
-// import { store } from "../../utils/axiosUtils/API";
-// import SimpleInputField from "../inputFields/SimpleInputField";
-// import SearchableSelectInput from "../inputFields/SearchableSelectInput";
-// import DescriptionInput from "../widgets/DescriptionInput";
-// import SettingContext from "../../helper/settingContext";
-// import { useTranslation } from "react-i18next";
-// import AccountContext from "@/helper/accountContext";
-// import { useRouter } from "next/navigation";
-// import useCustomQuery from "@/utils/hooks/useCustomQuery";
-
-// const GeneralTab = ({ values, setFieldValue, updateId }) => {
-//   const { t } = useTranslation("common");
-//   const { state } = useContext(SettingContext);
-//   const { role } = useContext(AccountContext);
-//   const router = useRouter();
-//   const { data: taxData } = useCustomQuery([tax], () => request({ url: tax, params: { status: 1 } }, router), { refetchOnWindowFocus: false, select: (data) => data.data.data });
-//   const { data: StoreData } = useCustomQuery([store], () => request({ url: store, params: { status: 1 } }, router), { refetchOnWindowFocus: false, select: (data) => data.data.data.map((item) => ({ id: item.id, name: item.store_name })) });
-//   return (
-//     <>
-//       {!updateId && (
-//         <SearchableSelectInput
-//           nameList={[
-//             {
-//               name: "product_type",
-//               title: "Product Type",
-//               require: "true",
-//               inputprops: {
-//                 name: "product_type",
-//                 id: "product_type",
-//                 options: [
-//                   { id: "physical", name: "Physical Product" },
-//                   { id: "digital", name: "Digital Product" },
-//                   { id: "external", name: "External/Affiliate  Product" },
-//                 ],
-//                 close: false,
-//               },
-//             },
-//           ]}
-//         />
-//       )}
-//       {state?.isMultiVendor && role === "admin" && (
-//         <SearchableSelectInput
-//           nameList={[
-//             {
-//               name: "store_id",
-//               title: "Store",
-//               require: "true",
-//               inputprops: {
-//                 name: "store_id",
-//                 id: "store_id",
-//                 options: StoreData || [],
-//                 close: false,
-//               },
-//             },
-//           ]}
-//         />
-//       )}
-//       <SimpleInputField
-//         nameList={[
-//           { name: "name", require: "true", placeholder: t("EnterName") },
-//           { name: "short_description", require: "true", title: "ShortDescription", type: "textarea", rows: 3, placeholder: t("EnterShortDescription"), helpertext: "*Maximum length should be 300 characters." },
-//         ]}
-//       />
-//       <DescriptionInput
-//         values={values}
-//         setFieldValue={setFieldValue}
-//         title={t("Description")}
-//         nameKey="description"
-//         // errorMessage={"Descriptionisrequired"}
-//       />
-//       <SearchableSelectInput
-//         nameList={[
-//           {
-//             name: "tax_id",
-//             title: "Tax",
-//             require: "true",
-//             inputprops: {
-//               name: "tax_id",
-//               id: "tax_id",
-//               options: taxData || [],
-//             },
-//           },
-//         ]}
-//       />
-//     </>
-//   );
-// };
-
-// export default GeneralTab;
-
-//--------------------------------------
-
 import React from "react";
+import { Row, Col } from "reactstrap"; // Added for Grid layout
 import request from "../../utils/axiosUtils";
 import { Category, BrandAPI } from "../../utils/axiosUtils/API";
 import SimpleInputField from "../inputFields/SimpleInputField";
 import SearchableSelectInput from "../inputFields/SearchableSelectInput";
-import MultiSelectField from "../inputFields/MultiSelectField"; // Using this for category
+import MultiSelectField from "../inputFields/MultiSelectField";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/navigation";
 import useCustomQuery from "@/utils/hooks/useCustomQuery";
 
 /**
  * NEW GeneralTab for the Master Product (Deliverable 4)
- * This replaces the old vendor-centric tab.
+ * Updated to include Pricing, Conditions, and Global Identifiers
  */
 const GeneralTab = ({ values, setFieldValue, updateId }) => {
   const { t } = useTranslation("common");
   const router = useRouter();
 
-  // Fetch LEAF categories (products can only be in leaf categories)
+  // Fetch LEAF categories
   const { data: categoryData } = useCustomQuery(
     ["leafCategories"],
     () =>
@@ -124,7 +30,6 @@ const GeneralTab = ({ values, setFieldValue, updateId }) => {
       ),
     {
       refetchOnWindowFocus: false,
-      // Map data to show the full category path (e.g., "Electronics > Phones")
       select: (data) =>
         data.data.data.map((item) => ({
           id: item._id,
@@ -151,6 +56,15 @@ const GeneralTab = ({ values, setFieldValue, updateId }) => {
     { id: "archived", name: "Archived" },
   ];
 
+  // Condition Options (Hardcoded to match Backend Schema)
+  const conditionOptions = [
+    { id: "new", name: "New" },
+    { id: "refurbished", name: "Refurbished" },
+    { id: "used_like_new", name: "Used - Like New" },
+    { id: "used_good", name: "Used - Good" },
+    { id: "used_fair", name: "Used - Fair" },
+  ];
+
   return (
     <>
       <SimpleInputField
@@ -164,7 +78,7 @@ const GeneralTab = ({ values, setFieldValue, updateId }) => {
         ]}
       />
 
-      {/* New Category Selector (links to taxonomy) */}
+      {/* Category Selector */}
       <SearchableSelectInput
         nameList={[
           {
@@ -213,6 +127,101 @@ const GeneralTab = ({ values, setFieldValue, updateId }) => {
           },
         ]}
       />
+
+      {/* --- NEW SECTION: Pricing & Conditions --- */}
+      <div className="mb-4 mt-4 border-top pt-4">
+        <h5 className="fw-semibold mb-3">{t("Pricing & Conditions")}</h5>
+        <Row>
+          <Col sm="6">
+            <SimpleInputField
+              nameList={[
+                {
+                  name: "standard_price",
+                  title: "Standard Price (MSRP)",
+                  type: "number",
+                  placeholder: "0.00",
+                  helper: "Suggested price for vendors",
+                },
+              ]}
+            />
+          </Col>
+          <Col sm="6">
+            <MultiSelectField
+              name="allowed_conditions"
+              title="Allowed Conditions"
+              data={conditionOptions}
+              values={values}
+              setFieldValue={setFieldValue}
+              getValuesKey="id"
+              helper="Select conditions allowed for listing (e.g. New only)"
+            />
+          </Col>
+        </Row>
+      </div>
+
+      {/* --- NEW SECTION: Global Identifiers --- */}
+      <div className="mb-4 border-top pt-4">
+        <h5 className="fw-semibold mb-3">
+          {t("Global Identifiers (Optional)")}
+        </h5>
+        <Row>
+          <Col sm="6">
+            <SimpleInputField
+              nameList={[
+                {
+                  name: "upc",
+                  title: "UPC",
+                  placeholder: "Universal Product Code",
+                },
+              ]}
+            />
+          </Col>
+          <Col sm="6">
+            <SimpleInputField
+              nameList={[
+                {
+                  name: "ean",
+                  title: "EAN",
+                  placeholder: "European Article Number",
+                },
+              ]}
+            />
+          </Col>
+          <Col sm="6">
+            <SimpleInputField
+              nameList={[
+                {
+                  name: "gtin",
+                  title: "GTIN",
+                  placeholder: "Global Trade Item Number",
+                },
+              ]}
+            />
+          </Col>
+          <Col sm="6">
+            <SimpleInputField
+              nameList={[
+                {
+                  name: "isbn",
+                  title: "ISBN",
+                  placeholder: "International Standard Book Number",
+                },
+              ]}
+            />
+          </Col>
+          <Col sm="6">
+            <SimpleInputField
+              nameList={[
+                {
+                  name: "mpn",
+                  title: "MPN",
+                  placeholder: "Manufacturer Part Number",
+                },
+              ]}
+            />
+          </Col>
+        </Row>
+      </div>
     </>
   );
 };

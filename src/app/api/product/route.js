@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
-import Product from "@/models/Products"; // Now references the Master Product Schema
+import Product from "@/models/Products";
 import Category from "@/models/Category";
 import Brand from "@/models/Brand";
 import { requireAdmin, requireAuth } from "@/utils/auth/serverAuth";
@@ -16,11 +16,7 @@ export async function GET(request) {
   try {
     await dbConnect();
 
-    // Admin check (listing master products is an admin task)
-    // const authCheck = await requireAdmin(request);
-    // if (!authCheck.success) {
-    //   return authCheck.errorResponse;
-    // }
+    // Allow Vendor or Admin to view products
     const authCheck = await requireAuth(request);
     if (!authCheck.success) {
       return authCheck.errorResponse;
@@ -28,12 +24,15 @@ export async function GET(request) {
 
     const searchParams = request?.nextUrl?.searchParams;
     const querySearch = searchParams.get("search");
+    const queryCategory = searchParams.get("category_id"); // Get Category Filter
+    const queryExport = searchParams.get("export"); // Get Export Flag
+
     const queryPage = parseInt(searchParams.get("page")) || 1;
     const queryLimit = parseInt(searchParams.get("paginate")) || 10;
 
     let query = {};
 
-    // Search by product name or master product code
+    // 1. Search by product name or master product code
     if (querySearch) {
       query.$or = [
         { product_name: { $regex: querySearch, $options: "i" } },
@@ -41,9 +40,29 @@ export async function GET(request) {
       ];
     }
 
+    // 2. Filter by Category
+    if (queryCategory) {
+      query.category_id = queryCategory;
+    }
+
     // Default sort: newest first
     const sortOptions = { created_at: -1 };
 
+    // 3. Handle Export (No Pagination)
+    if (queryExport === "true") {
+      const products = await Product.find(query)
+        .populate("category_id", "name display_name path")
+        .populate("brand_id", "name")
+        .sort(sortOptions)
+        .lean();
+
+      return NextResponse.json({
+        data: products, // Standard format for ShowTable export
+        success: true,
+      });
+    }
+
+    // 4. Standard Paginated Response
     const totalProducts = await Product.countDocuments(query);
     const products = await Product.find(query)
       .populate("category_id", "name display_name path")
@@ -103,9 +122,22 @@ export async function POST(request) {
       variant_values,
       seo_meta_title,
       seo_meta_description,
+      // New Fields
+      upc,
+      ean,
+      gtin,
+      isbn,
+      mpn,
+      standard_price,
+      allowed_conditions,
+      // Related & Upsell
+      related_products,
+      related_product_config,
+      cross_sell_products,
+      upsell_product_config,
     } = productData;
 
-    // --- 1. Validation (Deliverable 4 Workflow) ---
+    // --- 1. Validation ---
     if (!product_name || !category_id) {
       return NextResponse.json(
         { success: false, message: "Product Name and Category are required." },
@@ -130,7 +162,18 @@ export async function POST(request) {
       );
     }
 
-    // --- 2. Validate Mandatory Attributes/Variants (Deliverable 3 Requirement) ---
+    // --- 2. Sanitize Policies (Convert empty strings to null for ObjectIds) ---
+    let sanitizedPolicies = { ...product_policies };
+    if (sanitizedPolicies) {
+      if (!sanitizedPolicies.return_policy)
+        sanitizedPolicies.return_policy = null;
+      if (!sanitizedPolicies.refund_policy)
+        sanitizedPolicies.refund_policy = null;
+      if (!sanitizedPolicies.warranty_info)
+        sanitizedPolicies.warranty_info = null;
+    }
+
+    // --- 3. Validate Mandatory Attributes/Variants ---
     for (const mapping of category.attribute_mapping) {
       if (
         mapping.is_mandatory &&
@@ -160,7 +203,7 @@ export async function POST(request) {
       }
     }
 
-    // --- 3. Generate UPID (master_product_code) (Deliverable 4 Requirement) ---
+    // --- 4. Generate UPID ---
     const lastProduct = await Product.findOne().sort({ created_at: -1 });
     let nextId = 1;
     if (lastProduct && lastProduct.master_product_code) {
@@ -178,9 +221,8 @@ export async function POST(request) {
       }
     }
     const master_product_code = `UPID-${nextId.toString().padStart(6, "0")}`;
-    console.log(`Generated new UPID: ${master_product_code}`);
 
-    // --- 4. Slug Generation ---
+    // --- 5. Slug Generation ---
     let slug = product_name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
@@ -190,20 +232,16 @@ export async function POST(request) {
       slug = `${slug}-${Date.now()}`;
     }
 
-    // --- 5. File Uploads (Mapping to 'media' array) ---
+    // --- 6. File Uploads ---
     const media = [];
     const product_thumbnail_file = formData.get("product_thumbnail");
     const product_galleries_files = formData.getAll("product_galleries");
-    // Support new front-end field `new_media_files` (multiple files appended as same key)
     const new_media_files = formData.getAll("new_media_files");
 
     try {
-      // Upload Thumbnail using Buffer (Vercel compatible)
       if (product_thumbnail_file && product_thumbnail_file.size > 0) {
-        console.log("☁️ Uploading thumbnail...");
         const bytes = await product_thumbnail_file.arrayBuffer();
         const buffer = Buffer.from(bytes);
-
         const uploadResult = await uploadToCloudinary(
           [{ buffer, originalname: product_thumbnail_file.name }],
           "products"
@@ -213,19 +251,13 @@ export async function POST(request) {
           is_primary: true,
           type: "image",
         });
-        console.log("✅ Thumbnail uploaded");
       }
 
-      // Upload Galleries using Buffer (Vercel compatible)
       if (product_galleries_files && product_galleries_files.length > 0) {
-        console.log(
-          `☁️ Uploading ${product_galleries_files.length} gallery images...`
-        );
         for (const galleryFile of product_galleries_files) {
           if (galleryFile && galleryFile.size > 0) {
             const bytes = await galleryFile.arrayBuffer();
             const buffer = Buffer.from(bytes);
-
             const uploadResult = await uploadToCloudinary(
               [{ buffer, originalname: galleryFile.name }],
               "products"
@@ -237,24 +269,17 @@ export async function POST(request) {
             });
           }
         }
-        console.log(`✅ Uploaded ${media.length - 1} gallery images`);
       }
 
-      // Upload any `new_media_files` sent by the front-end (master product form)
       if (new_media_files && new_media_files.length > 0) {
-        console.log(
-          `☁️ Uploading ${new_media_files.length} new_media_files...`
-        );
         for (const fileItem of new_media_files) {
           if (fileItem && fileItem.size > 0) {
             const bytes = await fileItem.arrayBuffer();
             const buffer = Buffer.from(bytes);
-
             const uploadResult = await uploadToCloudinary(
               [{ buffer, originalname: fileItem.name }],
               "products"
             );
-
             media.push({
               url: uploadResult[0].secure_url,
               is_primary: false,
@@ -262,7 +287,6 @@ export async function POST(request) {
             });
           }
         }
-        console.log(`✅ Uploaded ${new_media_files.length} new media files`);
       }
     } catch (uploadError) {
       console.error("❌ Upload error:", uploadError);
@@ -276,13 +300,11 @@ export async function POST(request) {
       );
     }
 
-    // If no explicit primary image was set but we have uploaded media,
-    // mark the first media item as primary so front-end components show an image.
     if (media.length > 0 && !media.some((m) => m.is_primary)) {
       media[0].is_primary = true;
     }
 
-    // --- 6. Save New Master Product ---
+    // --- 7. Save New Master Product ---
     const newProduct = new Product({
       master_product_code,
       product_name,
@@ -290,7 +312,29 @@ export async function POST(request) {
       category_id,
       brand_id: brand_id || null,
       status: productData.status || "inactive",
-      product_policies: product_policies || {},
+
+      // New Fields
+      upc: upc || null,
+      ean: ean || null,
+      gtin: gtin || null,
+      isbn: isbn || null,
+      mpn: mpn || null,
+      standard_price: Number(standard_price) || 0,
+      allowed_conditions: Array.isArray(allowed_conditions)
+        ? allowed_conditions
+        : [],
+
+      // Related & Upsell Configuration
+      related_products: related_products || [],
+      related_product_config: related_product_config || {},
+      cross_sell_products: cross_sell_products || [],
+      upsell_product_config: upsell_product_config || {},
+
+      // Content & Policies (Sanitized)
+      product_policies: sanitizedPolicies,
+
+      internal_notes: productData.internal_notes || "",
+
       attribute_values: attribute_values || [],
       variant_values: variant_values || [],
       media: media,
@@ -319,17 +363,6 @@ export async function POST(request) {
         { status: 400 }
       );
     }
-    if (error.code === 11000) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: `A product with this ${
-            Object.keys(error.keyPattern)[0]
-          } already exists`,
-        },
-        { status: 409 }
-      );
-    }
     return NextResponse.json(
       {
         success: false,
@@ -341,19 +374,16 @@ export async function POST(request) {
   }
 }
 
-/**
- * DELETE /api/product - Bulk delete MASTER products
- */
+// DELETE remains unchanged...
 export async function DELETE(request) {
+  // ... (Keep existing delete logic)
   console.log("=== MASTER PRODUCT BULK DELETE API CALLED ===");
   try {
     await dbConnect();
-
     const authCheck = await requireAdmin(request);
     if (!authCheck.success) {
       return authCheck.errorResponse;
     }
-
     const { ids } = await request.json();
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return NextResponse.json(
@@ -361,11 +391,7 @@ export async function DELETE(request) {
         { status: 400 }
       );
     }
-
-    // Find products to get image URLs
     const productsToDelete = await Product.find({ _id: { $in: ids } });
-
-    // Collect images from the 'media' array
     const imagesToDelete = [];
     productsToDelete.forEach((product) => {
       if (product.media && Array.isArray(product.media)) {
@@ -374,31 +400,20 @@ export async function DELETE(request) {
         });
       }
     });
-
-    // Delete images from Cloudinary
     if (imagesToDelete.length > 0) {
-      console.log(
-        `🗑️ Deleting ${imagesToDelete.length} images from Cloudinary`
-      );
       for (const imageUrl of imagesToDelete) {
         await deleteFromCloudinary(imageUrl).catch((err) =>
           console.error("⚠️ Error deleting image from Cloudinary:", err)
         );
       }
-      console.log("✅ All images deleted from Cloudinary");
     }
-
-    // Delete products from database
     const result = await Product.deleteMany({ _id: { $in: ids } });
-    console.log(`✅ Deleted ${result.deletedCount} products from database`);
-
     return NextResponse.json({
       success: true,
       message: `${result.deletedCount} products deleted successfully`,
       deleted_count: result.deletedCount,
     });
   } catch (error) {
-    console.error("❌ Product DELETE error:", error);
     return NextResponse.json(
       {
         success: false,

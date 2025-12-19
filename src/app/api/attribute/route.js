@@ -1,8 +1,8 @@
 import dbConnect from "@/lib/dbConnect";
-import Attribute from "@/models/Attributes"; 
+import Attribute from "@/models/Attributes";
 import { NextResponse } from "next/server";
 
-// GET - Fetch all attributes with pagination
+// GET - Fetch all attributes with pagination and filtering
 export async function GET(request) {
   try {
     await dbConnect();
@@ -11,17 +11,29 @@ export async function GET(request) {
     const page = parseInt(searchParams.get("page")) || 1;
     const paginate = parseInt(searchParams.get("paginate")) || 15;
     const search = searchParams.get("search") || "";
+
+    // Get Filter Params
     const status = searchParams.get("status");
+    const style = searchParams.get("style");
 
     const skip = (page - 1) * paginate;
 
     // Build query
     let query = {};
+
+    // 1. Search by name
     if (search) {
       query.name = { $regex: search, $options: "i" };
     }
+
+    // 2. Filter by Status (Convert to number if present)
     if (status !== null && status !== undefined && status !== "") {
       query.status = parseInt(status);
+    }
+
+    // 3. Filter by Style
+    if (style && style !== "") {
+      query.style = style;
     }
 
     // Get total count for pagination
@@ -68,10 +80,7 @@ export async function POST(request) {
     // Validation
     if (!name || !style) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Name and style are required",
-        },
+        { success: false, message: "Name and style are required" },
         { status: 400 }
       );
     }
@@ -90,10 +99,7 @@ export async function POST(request) {
 
     if (existingAttribute) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Attribute with this name already exists",
-        },
+        { success: false, message: "Attribute with this name already exists" },
         { status: 409 }
       );
     }
@@ -136,6 +142,41 @@ export async function POST(request) {
       {
         success: false,
         message: "Failed to create attribute",
+        error: error.message,
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE - Bulk Delete Attributes
+export async function DELETE(request) {
+  try {
+    await dbConnect();
+
+    const body = await request.json();
+    const { ids } = body; // Expecting { ids: ["id1", "id2"] }
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json(
+        { success: false, message: "No attribute IDs provided" },
+        { status: 400 }
+      );
+    }
+
+    // Delete multiple attributes
+    const result = await Attribute.deleteMany({ _id: { $in: ids } });
+
+    return NextResponse.json({
+      success: true,
+      message: `${result.deletedCount} attributes deleted successfully`,
+    });
+  } catch (error) {
+    console.error("Error bulk deleting attributes:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to delete attributes",
         error: error.message,
       },
       { status: 500 }

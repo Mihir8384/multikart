@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useDropzone } from "react-dropzone";
-import { Col, Card, CardBody, Label } from "reactstrap";
+import { Col, Card, CardBody, Label, Alert } from "reactstrap"; // Added Alert
 import {
   RiDeleteBinLine,
   RiStarFill,
@@ -11,6 +11,7 @@ import {
 import Image from "next/image";
 import Btn from "@/elements/buttons/Btn";
 import { placeHolderImage } from "@/data/CommonPath";
+import { ToastNotification } from "@/utils/customFunctions/ToastNotification"; // Import Toast for errors
 
 const MediaTab = ({ values, setFieldValue, errors, updateId }) => {
   const { t } = useTranslation("common");
@@ -26,26 +27,68 @@ const MediaTab = ({ values, setFieldValue, errors, updateId }) => {
     })),
   ];
 
+  // Helper function to validate image dimensions
+  const validateImage = (file) => {
+    return new Promise((resolve) => {
+      const img = document.createElement("img");
+      img.src = URL.createObjectURL(file);
+      img.onload = () => {
+        const width = img.width;
+        const height = img.height;
+        let isValid = true;
+        let errorMessage = "";
+
+        // 1. Check 1:1 Aspect Ratio
+        if (width !== height) {
+          isValid = false;
+          errorMessage = `Image must be a square (1:1 ratio). Your image is ${width}x${height}px.`;
+        }
+        // 2. Check Resolution Range (1000px - 2000px)
+        else if (width < 1000 || width > 2000) {
+          isValid = false;
+          errorMessage = `Resolution must be between 1000x1000px and 2000x2000px. Your image is ${width}x${height}px.`;
+        }
+
+        resolve({ isValid, errorMessage });
+      };
+      img.onerror = () => {
+        resolve({ isValid: false, errorMessage: "Invalid image file." });
+      };
+    });
+  };
+
   const { getRootProps, getInputProps } = useDropzone({
     accept: {
       "image/*": [".jpeg", ".jpg", ".png", ".gif"],
     },
-    onDrop: (acceptedFiles) => {
-      // Create previews
-      const filesWithPreview = acceptedFiles.map((file) =>
-        Object.assign(file, {
-          preview: URL.createObjectURL(file),
-        })
-      );
+    onDrop: async (acceptedFiles) => {
+      const validFiles = [];
 
-      // Add new files to Formik state for submission
-      setFieldValue("new_media_files", [
-        ...(values.new_media_files || []),
-        ...filesWithPreview,
-      ]);
+      // Validate each file before adding
+      for (const file of acceptedFiles) {
+        const validation = await validateImage(file);
+        if (validation.isValid) {
+          // Add preview URL if valid
+          Object.assign(file, {
+            preview: URL.createObjectURL(file),
+          });
+          validFiles.push(file);
+        } else {
+          // Show error if invalid
+          ToastNotification("error", validation.errorMessage);
+        }
+      }
 
-      // Add to local state for display
-      setUploadedFiles((prev) => [...prev, ...filesWithPreview]);
+      if (validFiles.length > 0) {
+        // Add new files to Formik state for submission
+        setFieldValue("new_media_files", [
+          ...(values.new_media_files || []),
+          ...validFiles,
+        ]);
+
+        // Add to local state for display
+        setUploadedFiles((prev) => [...prev, ...validFiles]);
+      }
     },
   });
 
@@ -59,10 +102,12 @@ const MediaTab = ({ values, setFieldValue, errors, updateId }) => {
     }));
 
     // Update the main 'media' array in Formik
+    // We only save existing media here to update their primary status
+    // New files are handled separately via 'new_media_files'
     setFieldValue(
       "media",
       updatedMedia.filter((m) => !m.file)
-    ); // Only save existing media
+    );
   };
 
   // Remove an image
@@ -95,6 +140,27 @@ const MediaTab = ({ values, setFieldValue, errors, updateId }) => {
 
   return (
     <Col>
+      {/* --- Media Quality Standards Notice --- */}
+      <Alert color="info" className="mb-4 d-flex flex-column align-items-start">
+        <h5 className="alert-heading fw-bold mb-2">Media Quality Standards</h5>
+        <div style={{ fontSize: "0.95rem", lineHeight: "1.6" }}>
+          Use clear, well-lit photos with a clean background. Blurry or
+          low-resolution images reduce customer trust and can hurt sales. <br />
+          <strong>Recommended size:</strong> 1000×1000 px or higher, JPG/PNG.{" "}
+          <br />
+          You can upload up to 6 pictures and 1 video. For more information
+          please visit the
+          <a
+            href="#"
+            onClick={(e) => e.preventDefault()}
+            className="fw-bold text-decoration-underline ms-1"
+          >
+            Product Image Quality Standard page
+          </a>
+          .
+        </div>
+      </Alert>
+
       <div className="title-header option-title">
         <h5>{t("Media")}</h5>
       </div>
@@ -118,7 +184,7 @@ const MediaTab = ({ values, setFieldValue, errors, updateId }) => {
               width={150}
               height={150}
               className="card-img-top"
-              objectFit="cover"
+              style={{ objectFit: "cover" }} // Ensure aspect ratio visual correctness
             />
             <CardBody className="p-2">
               <div className="d-flex justify-content-between align-items-center">

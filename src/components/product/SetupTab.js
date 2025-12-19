@@ -1,15 +1,12 @@
-//
-//------------------------------------------------------
-
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Col, Row, Label } from "reactstrap";
 import CheckBoxField from "../inputFields/CheckBoxField.js";
 import request from "../../utils/axiosUtils/index.js";
-import { product } from "../../utils/axiosUtils/API.js"; // Removed BrandAPI, Category, tag
+import { product, category, tag } from "../../utils/axiosUtils/API.js";
 import SearchableSelectInput from "../inputFields/SearchableSelectInput.js";
 import useCustomQuery from "@/utils/hooks/useCustomQuery.js";
-// Removed MultiSelectField, SimpleInputField, ProductDateRangePicker
 
 const SetupTab = ({ values, setFieldValue, errors, updateId }) => {
   const { t } = useTranslation("common");
@@ -18,9 +15,76 @@ const SetupTab = ({ values, setFieldValue, errors, updateId }) => {
   const [tc, setTc] = useState(null);
   const router = useRouter();
 
-  // Removed Category, Tag, and Brand data fetching
+  // --- NEW: Initialize Defaults for Config Objects ---
+  useEffect(() => {
+    if (values && !values.related_product_config) {
+      setFieldValue("related_product_config", {
+        is_manual: true,
+        auto_rules: {
+          by_tags: false,
+          tag_ids: [],
+          by_category: false,
+          category_ids: [],
+        },
+      });
+    }
+    if (values && !values.upsell_product_config) {
+      setFieldValue("upsell_product_config", {
+        is_manual: true,
+        auto_rules: {
+          by_tags: false,
+          tag_ids: [],
+          by_category: false,
+          category_ids: [],
+          by_collection: false,
+          collection_ids: [],
+        },
+      });
+    }
+  }, [values?.related_product_config, values?.upsell_product_config]);
 
-  // Getting Products Data (to populate the selectors)
+  // --- 1. Fetch Categories (Fixed Data Selector) ---
+  const { data: categoryData } = useCustomQuery(
+    [category],
+    () =>
+      request(
+        { url: category, params: { status: "active", type: "product" } },
+        router
+      ),
+    {
+      refetchOnWindowFocus: false,
+      select: (res) => {
+        // Check different possible API response structures
+        const list = res?.data?.data || res?.data || [];
+        return list.map((item) => ({
+          id: item.id || item._id,
+          name: item.name,
+        }));
+      },
+    }
+  );
+
+  // --- 2. Fetch Tags (Fixed Data Selector) ---
+  const { data: tagData } = useCustomQuery(
+    [tag],
+    () =>
+      request(
+        { url: tag, params: { status: "active", type: "product" } },
+        router
+      ),
+    {
+      refetchOnWindowFocus: false,
+      select: (res) => {
+        const list = res?.data?.data || res?.data || [];
+        return list.map((item) => ({
+          id: item.id || item._id,
+          name: item.name,
+        }));
+      },
+    }
+  );
+
+  // --- 3. Fetch Products for Manual Selection ---
   const [arrayState, setArrayState] = useState([]);
   useEffect(() => {
     if (updateId) {
@@ -36,18 +100,14 @@ const SetupTab = ({ values, setFieldValue, errors, updateId }) => {
     }
   }, [updateId]);
 
-  const {
-    data: productData,
-    isLoading: productLoader,
-    refetch,
-  } = useCustomQuery(
-    [product, arrayState, customSearch], // Added customSearch to queryKey
+  const { data: productData, refetch } = useCustomQuery(
+    [product, arrayState, customSearch],
     () =>
       request(
         {
           url: product,
           params: {
-            status: "active", // Use new status string
+            status: "active",
             search: customSearch ? customSearch : "",
             paginate: 15,
             ids: customSearch ? null : arrayState?.join() || null,
@@ -56,13 +116,12 @@ const SetupTab = ({ values, setFieldValue, errors, updateId }) => {
         router
       ),
     {
-      enabled: true, // Enable query
+      enabled: true,
       refetchOnWindowFocus: false,
       select: (res) =>
         res?.data?.data
-          .filter((elem) => (updateId ? elem.id !== updateId : elem)) // Filter out self
+          .filter((elem) => (updateId ? elem.id !== updateId : elem))
           .map((elem) => {
-            // Find primary image from the NEW media array
             const primaryImage =
               elem.media?.find((m) => m.is_primary)?.url ||
               elem.media?.[0]?.url ||
@@ -77,70 +136,219 @@ const SetupTab = ({ values, setFieldValue, errors, updateId }) => {
     }
   );
 
-  // Added debouncing
+  // Debouncing for product search
   useEffect(() => {
     if (tc) clearTimeout(tc);
     setTc(setTimeout(() => setCustomSearch(search), 500));
   }, [search]);
 
-  // Refetch when search changes
   useEffect(() => {
     refetch();
   }, [customSearch]);
 
   return (
     <>
-      {/* Removed DateRangePicker, Unit, Tags, Categories, Brand */}
+      {/* ===================================================================
+          SECTION 1: RELATED PRODUCTS
+         =================================================================== */}
+      <div className="mb-5 border-bottom pb-4">
+        <h4 className="fw-bold mb-3">{t("RelatedProducts")}</h4>
 
-      <CheckBoxField
-        name="is_random_related_products"
-        title="RandomRelatedProduct"
-        helpertext="*Enabling this option allows the backend to randomly select 6 products for display."
-      />
-      {!values["is_random_related_products"] && (
-        <SearchableSelectInput
-          nameList={[
-            {
-              name: "related_products",
-              title: "RelatedProducts",
-              inputprops: {
-                name: "related_products",
-                id: "related_products",
-                options: productData || [],
-                setsearch: setSearch,
-                helpertext:
-                  "*Choose a maximum of 6 products for effective related products display.",
-              },
-            },
-          ]}
-        />
-      )}
+        {/* Toggle Manual vs Auto */}
+        {values.related_product_config && (
+          <CheckBoxField
+            name="related_product_config.is_manual"
+            title="Enable Manual Selection"
+            helpertext="Disable this to use automatic suggestion rules based on Tags or Categories."
+          />
+        )}
 
-      {/* Removed product_type check */}
-      <SearchableSelectInput
-        nameList={[
-          {
-            name: "cross_sell_products",
-            title: "CrossSellProduct",
-            inputprops: {
-              name: "cross_sell_products",
-              id: "cross_sell_products",
-              options:
-                productData?.map((elem) => {
-                  // Use productData directly
-                  return {
-                    id: elem.id,
-                    name: elem.name,
-                    image: elem?.image || "/assets/images/placeholder.png",
-                  };
-                }) || [],
-              setsearch: setSearch,
-              helpertext:
-                "*Choose a maximum of 3 products for effective cross-selling display.",
-            },
-          },
-        ]}
-      />
+        {/* Option A: Manual Selection */}
+        {values?.related_product_config?.is_manual ? (
+          <div className="mt-3">
+            <SearchableSelectInput
+              nameList={[
+                {
+                  name: "related_products",
+                  title: "Select Products",
+                  inputprops: {
+                    name: "related_products",
+                    id: "related_products",
+                    options: productData || [],
+                    setsearch: setSearch,
+                    helpertext: "*Manually select up to 6 products.",
+                  },
+                },
+              ]}
+            />
+          </div>
+        ) : (
+          /* Option B: Auto Rules */
+          <div className="p-3 bg-light rounded mt-2">
+            <h6 className="fw-bold text-muted mb-3">
+              Automatic Suggestions Criteria
+            </h6>
+            <p className="small text-muted mb-3">
+              The system will randomly pick 6 products matching ANY of the
+              enabled criteria below.
+            </p>
+
+            {/* Rule 1: By Tags */}
+            <CheckBoxField
+              name="related_product_config.auto_rules.by_tags"
+              title="Suggest by Tags"
+            />
+            {values?.related_product_config?.auto_rules?.by_tags && (
+              <SearchableSelectInput
+                nameList={[
+                  {
+                    name: "related_product_config.auto_rules.tag_ids",
+                    title: "Select Tags",
+                    inputprops: {
+                      name: "related_product_config.auto_rules.tag_ids",
+                      id: "related_tags",
+                      options: tagData || [],
+                      close: false,
+                    },
+                  },
+                ]}
+              />
+            )}
+
+            {/* Rule 2: By Category */}
+            <div className="mt-3">
+              <CheckBoxField
+                name="related_product_config.auto_rules.by_category"
+                title="Suggest by Category"
+              />
+              {values?.related_product_config?.auto_rules?.by_category && (
+                <SearchableSelectInput
+                  nameList={[
+                    {
+                      name: "related_product_config.auto_rules.category_ids",
+                      title: "Select Categories",
+                      inputprops: {
+                        name: "related_product_config.auto_rules.category_ids",
+                        id: "related_categories",
+                        options: categoryData || [],
+                        close: false,
+                      },
+                    },
+                  ]}
+                />
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ===================================================================
+          SECTION 2: UPSELL PRODUCTS (CROSS-SELL)
+         =================================================================== */}
+      <div className="mb-4">
+        <h4 className="fw-bold mb-3">{t("UpsellProducts")}</h4>
+
+        {/* Toggle Manual vs Auto */}
+        {values.upsell_product_config && (
+          <CheckBoxField
+            name="upsell_product_config.is_manual"
+            title="Enable Manual Selection"
+            helpertext="Disable this to use automatic suggestion rules."
+          />
+        )}
+
+        {/* Option A: Manual Selection */}
+        {values?.upsell_product_config?.is_manual ? (
+          <div className="mt-3">
+            <SearchableSelectInput
+              nameList={[
+                {
+                  name: "cross_sell_products",
+                  title: "Select Products",
+                  inputprops: {
+                    name: "cross_sell_products",
+                    id: "cross_sell_products",
+                    options: productData || [],
+                    setsearch: setSearch,
+                    helpertext: "*Manually select up to 3 products.",
+                  },
+                },
+              ]}
+            />
+          </div>
+        ) : (
+          /* Option B: Auto Rules */
+          <div className="p-3 bg-light rounded mt-2">
+            <h6 className="fw-bold text-muted mb-3">
+              Automatic Suggestions Criteria
+            </h6>
+            <p className="small text-muted mb-3">
+              System will suggest Best Sellers matching these criteria.
+            </p>
+
+            {/* Rule 1: By Tags */}
+            <CheckBoxField
+              name="upsell_product_config.auto_rules.by_tags"
+              title="Suggest by Tags"
+            />
+            {values?.upsell_product_config?.auto_rules?.by_tags && (
+              <SearchableSelectInput
+                nameList={[
+                  {
+                    name: "upsell_product_config.auto_rules.tag_ids",
+                    title: "Select Tags",
+                    inputprops: {
+                      name: "upsell_product_config.auto_rules.tag_ids",
+                      id: "upsell_tags",
+                      options: tagData || [],
+                      close: false,
+                    },
+                  },
+                ]}
+              />
+            )}
+
+            {/* Rule 2: By Category */}
+            <div className="mt-3">
+              <CheckBoxField
+                name="upsell_product_config.auto_rules.by_category"
+                title="Suggest by Category"
+              />
+              {values?.upsell_product_config?.auto_rules?.by_category && (
+                <SearchableSelectInput
+                  nameList={[
+                    {
+                      name: "upsell_product_config.auto_rules.category_ids",
+                      title: "Select Categories",
+                      inputprops: {
+                        name: "upsell_product_config.auto_rules.category_ids",
+                        id: "upsell_categories",
+                        options: categoryData || [],
+                        close: false,
+                      },
+                    },
+                  ]}
+                />
+              )}
+            </div>
+
+            {/* Rule 3: By Collection */}
+            <div className="mt-3">
+              <CheckBoxField
+                name="upsell_product_config.auto_rules.by_collection"
+                title="Suggest by Collection"
+              />
+              {/* Note: Using Attributes as Collections based on available APIs */}
+              {values?.upsell_product_config?.auto_rules?.by_collection && (
+                <div className="alert alert-warning py-2 small">
+                  Collection feature requires linking Attributes or specific
+                  Groups.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </>
   );
 };

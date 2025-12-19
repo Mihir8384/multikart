@@ -2,21 +2,36 @@ import TableWrapper from "../../utils/hoc/TableWrapper";
 import ShowTable from "../table/ShowTable";
 import usePermissionCheck from "../../utils/hooks/usePermissionCheck";
 import Loader from "../commonComponent/Loader";
+import { tag } from "../../utils/axiosUtils/API"; // Ensure this import exists
 
 const AllTagsTable = ({ data, ...props }) => {
   const [edit, destroy] = usePermissionCheck(["edit", "destroy"]);
 
-  console.log("Permissions - Edit:", edit, "Destroy:", destroy);
-  console.log("Tags Data:", data);
-
-  // Normalize rows: TableWrapper passes either `data` (array) or `{ data: [...] }`
   const rows = (data?.data ?? data ?? []).map((item) => ({
     ...item,
     id: item.id || item._id,
   }));
 
+  // --- Filter Configuration ---
+  const filterHeader = {
+    useSpecific: false,
+    filter: [
+      {
+        name: "status",
+        title: "Status",
+        type: "select",
+        options: [
+          { id: "1", name: "Active" },
+          { id: "0", name: "Inactive" },
+        ],
+        key: "id",
+        value: "name",
+      },
+    ],
+  };
+
   const headerObj = {
-    checkBox: false,
+    checkBox: true, // Enabled for bulk actions
     isOption: edit == false && destroy == false ? false : true,
     noEdit: edit ? false : true,
     isSerialNo: true,
@@ -34,7 +49,9 @@ const AllTagsTable = ({ data, ...props }) => {
     ],
     data: rows,
   };
+
   if (!data) return <Loader />;
+
   return (
     <>
       <ShowTable
@@ -42,6 +59,9 @@ const AllTagsTable = ({ data, ...props }) => {
         headerData={headerObj}
         editPermission={edit}
         destroyPermission={destroy}
+        filterHeader={filterHeader}
+        url={tag} // API URL for bulk actions
+        keyInPermission={"tag"}
       />
     </>
   );

@@ -1,126 +1,165 @@
-// import { useContext,useEffect } from "react";
-// import { Approved, product } from "../../utils/axiosUtils/API";
-// import TableWrapper from "../../utils/hoc/TableWrapper";
-// import ShowTable from "../table/ShowTable";
-// import Loader from "../commonComponent/Loader";
-// import usePermissionCheck from "../../utils/hooks/usePermissionCheck";
-// import AccountContext from "../../helper/accountContext";
-// import { useTranslation } from "react-i18next";
-// import { placeHolderImage } from "@/data/CommonPath";
-
-// const AllProductTable = ({ data, ...props }) => {
-
-//   const { t } = useTranslation( 'common');
-//   const [edit, destroy] = usePermissionCheck(["edit", "destroy"]);
-//   console.log('Permission Check - Edit:', edit, 'Destroy:', destroy);
-//   const { role, setRole } = useContext(AccountContext)
-//   useEffect(() => {
-//     const storedRole = localStorage.getItem("role");
-//     if (storedRole) {
-//       const parsedRole = JSON.parse(storedRole);
-//       setRole(parsedRole.name);
-//     }
-//   }, [])
-//   const headerObj = {
-//     checkBox: false,
-//     isOption: edit == false && destroy == false ? false : true,
-//     noEdit: edit ? false : true,
-//     isSerialNo:true,
-//     optionHead: { title: "Action",show:"product",  type: 'download',modalTitle: t("Download") },
-//     column: [
-//       { title: "Image", apiKey: "product_thumbnail", type: 'image', placeHolderImage: placeHolderImage },
-//       { title: "Name", apiKey: "name", sorting: true, sortBy: "desc" },
-//       { title: "SKU", apiKey: "sku", sorting: true, sortBy: "desc" },
-//       { title: "Price", apiKey: "sale_price", sorting: true, sortBy: "desc", type: 'price' },
-//       { title: "Stock", apiKey: "stock_status", type: 'stock_status' },
-//       { title: "Store", apiKey: "store", subKey: ["store_name"] },
-//       { title: "Approve", apiKey: "is_approved", type: 'switch', url: `${product}${Approved}` },
-//       { title: "Status", apiKey: "status", type: 'switch' }
-//     ],
-//     data: data?.map(item => ({
-//       ...item,
-//       id: item.id || item._id
-//     })) || []
-//   };
-//   headerObj.data.map((element) => element.sale_price = element?.sale_price)
-
-//   let pro = headerObj?.column?.filter((elem) => {
-//     return role == 'vendor' ? elem.title !== 'Approved' : elem;
-//   });
-//   headerObj.column = headerObj ? pro : [];
-//   if (!data) return <Loader />;
-//   return <>
-//     <ShowTable {...props} headerData={headerObj} editPermission={edit} destroyPermission={destroy} />
-//   </>
-// };
-
-// export default TableWrapper(AllProductTable);
-
-//--------------------------------------
-
-import { product } from "../../utils/axiosUtils/API";
+import { product, Category } from "../../utils/axiosUtils/API";
 import TableWrapper from "../../utils/hoc/TableWrapper";
 import ShowTable from "../table/ShowTable";
 import Loader from "../commonComponent/Loader";
 import usePermissionCheck from "../../utils/hooks/usePermissionCheck";
 import { useTranslation } from "react-i18next";
 import { placeHolderImage } from "@/data/CommonPath";
+import request from "../../utils/axiosUtils";
+import { useRouter } from "next/navigation";
+import useCustomQuery from "@/utils/hooks/useCustomQuery";
 
 const AllProductTable = ({ data, ...props }) => {
   const { t } = useTranslation("common");
   const [edit, destroy] = usePermissionCheck(["edit", "destroy"]);
-  console.log("Permission Check - Edit:", edit, "Destroy:", destroy);
+  const router = useRouter();
 
-  // Removed the vendor-specific role checking logic
+  // --- 1. FETCH CATEGORIES MANUALLY (Reliable Method) ---
+  const { data: categoryOptions } = useCustomQuery(
+    ["categoryFilter"],
+    () =>
+      request(
+        {
+          url: Category,
+          // Use 'active' string matching your DB, and is_leaf to only show relevant categories
+          params: { status: 1, type: "product", is_leaf: true },
+        },
+        router
+      ),
+    {
+      refetchOnWindowFocus: false,
+      select: (res) => {
+        // Handle different response structures safely
+        const list = res?.data?.data || res?.data || [];
+        return list.map((item) => ({
+          // Map to the format ShowTable expects
+          id: item.id || item._id,
+          name: item.name,
+        }));
+      },
+    }
+  );
+
+  // --- 2. Filter Configuration ---
+  const filterHeader = {
+    useSpecific: false,
+    filter: [
+      {
+        name: "category_id",
+        title: "Category",
+        type: "select",
+        // PASS DATA DIRECTLY instead of URL
+        options: categoryOptions || [],
+        key: "id",
+        value: "name",
+      },
+    ],
+  };
 
   const headerObj = {
-    checkBox: false,
-    isOption: edit == false && destroy == false ? false : true,
+    checkBox: true,
+    isOption: true,
     noEdit: edit ? false : true,
     isSerialNo: true,
-    optionHead: { title: "Action" }, // Simplified options
+
+    // --- 3. Export Configuration ---
+    optionHead: {
+      title: "Action",
+      type: "download",
+      show: "product",
+      modalTitle: t("Download"),
+    },
+
     column: [
       {
         title: "Image",
         apiKey: "product_thumbnail",
         type: "image",
         placeHolderImage: placeHolderImage,
+        style: { width: "70px", textAlign: "center" },
       },
-      { title: "Name", apiKey: "product_name", sorting: true, sortBy: "desc" },
+      {
+        title: "Name",
+        apiKey: "product_name",
+        sorting: true,
+        sortBy: "desc",
+        class: "fw-bold text-dark",
+        style: { minWidth: "250px" },
+      },
       {
         title: "UPID",
         apiKey: "master_product_code",
         sorting: true,
         sortBy: "desc",
+        style: { minWidth: "120px" },
       },
-      { title: "Category", apiKey: "category_name" },
-      { title: "Vendors", apiKey: "vendor_count", type: "string" }, // Shows count of linked vendors
-      { title: "Status", apiKey: "status", type: "switch" }, // Now points to the pre-processed numeric status
+      {
+        title: "Price",
+        apiKey: "final_price",
+        sorting: true,
+        sortBy: "desc",
+        type: "price",
+        style: { minWidth: "100px" },
+      },
+      {
+        title: "Category",
+        apiKey: "category_name",
+        style: { minWidth: "250px" },
+      },
+      {
+        title: "Vendors",
+        apiKey: "vendor_count",
+        type: "string",
+        style: { width: "80px", textAlign: "center" },
+      },
+      {
+        title: "Status",
+        apiKey: "status",
+        type: "switch",
+        style: { width: "80px" },
+      },
     ],
-    // Pre-process data to fit the new ShowTable columns
+
     data:
       data?.map((item) => {
-        // Find the primary image from the new 'media' array
         const primaryImage =
           item.media?.find((m) => m.is_primary)?.url ||
           item.media?.[0]?.url ||
           null;
+
+        let catName = "N/A";
+        if (item.category_id) {
+          if (
+            Array.isArray(item.category_id.path) &&
+            item.category_id.path.length > 0
+          ) {
+            catName = item.category_id.path.join(" > ");
+          } else if (item.category_id.name) {
+            catName = item.category_id.name;
+          }
+        }
+
+        // Price Logic
+        let displayPrice = item.standard_price;
+        if (!displayPrice && item.linked_vendor_offerings?.length > 0) {
+          displayPrice = item.linked_vendor_offerings[0].price;
+        }
 
         return {
           ...item,
           id: item.id || item._id,
           product_thumbnail: primaryImage
             ? { original_url: primaryImage }
-            : null, // Avatar expects an object with original_url
-          product_name: item.product_name, // Ensure new key is passed
-          category_name: item.category_id?.name || "N/A", // Get populated category name
-          vendor_count: item.linked_vendor_offerings?.length || 0, // Get vendor count
-          status: item.status === "active" ? 1 : 0, // Convert string 'active'/'inactive' to number for the switch
+            : null,
+          product_name: item.product_name,
+          master_product_code: item.master_product_code,
+          final_price: displayPrice || 0,
+          category_name: catName,
+          vendor_count: item.linked_vendor_offerings?.length || 0,
+          status: item.status === "active" ? 1 : 0,
         };
       }) || [],
   };
-
-  // Removed the vendor-specific column filter
 
   if (!data) return <Loader />;
 
@@ -131,6 +170,11 @@ const AllProductTable = ({ data, ...props }) => {
         headerData={headerObj}
         editPermission={edit}
         destroyPermission={destroy}
+        filterHeader={filterHeader}
+        url={product}
+        isExport={true}
+        isDuplicate={false}
+        keyInPermission={"product"}
       />
     </>
   );

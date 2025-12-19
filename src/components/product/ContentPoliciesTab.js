@@ -4,10 +4,38 @@ import { FieldArray } from "formik";
 import { RiAddLine, RiDeleteBinLine } from "react-icons/ri";
 import { Col, Input, Label } from "reactstrap";
 import SimpleInputField from "@/components/inputFields/SimpleInputField";
+import SearchableSelectInput from "@/components/inputFields/SearchableSelectInput"; // Import Dropdown
 import Btn from "@/elements/buttons/Btn";
+import request from "@/utils/axiosUtils";
+import useCustomQuery from "@/utils/hooks/useCustomQuery";
+import { useRouter } from "next/navigation";
 
 const ContentPoliciesTab = ({ values, setFieldValue }) => {
   const { t } = useTranslation("common");
+  const router = useRouter();
+
+  // 1. Fetch All Active Policies
+  const { data: allPolicies } = useCustomQuery(
+    ["policies"],
+    () => request({ url: "/policy", params: { status: 1 } }, router),
+    {
+      refetchOnWindowFocus: false,
+      select: (data) => data.data.data, // Extract the array of policies
+    }
+  );
+
+  // 2. Filter Policies by Type for Dropdowns
+  const warrantyOptions = allPolicies
+    ?.filter((p) => p.type === "warranty")
+    .map((p) => ({ id: p._id, name: p.name }));
+
+  const returnOptions = allPolicies
+    ?.filter((p) => p.type === "return")
+    .map((p) => ({ id: p._id, name: p.name }));
+
+  const refundOptions = allPolicies
+    ?.filter((p) => p.type === "refund")
+    .map((p) => ({ id: p._id, name: p.name }));
 
   return (
     <Col>
@@ -15,7 +43,7 @@ const ContentPoliciesTab = ({ values, setFieldValue }) => {
         <h5>{t("Content & Policies")}</h5>
       </div>
 
-      {/* 'About This Item' field */}
+      {/* 'About This Item' field (Kept as text) */}
       <SimpleInputField
         nameList={[
           {
@@ -28,7 +56,7 @@ const ContentPoliciesTab = ({ values, setFieldValue }) => {
         ]}
       />
 
-      {/* 'Key Features' dynamic array */}
+      {/* 'Key Features' dynamic array (Kept as text list) */}
       <div className="mb-4">
         <Label className="form-label">{t("KeyFeatures")}</Label>
         <FieldArray
@@ -70,30 +98,62 @@ const ContentPoliciesTab = ({ values, setFieldValue }) => {
         />
       </div>
 
-      {/* Other policy fields */}
-      <SimpleInputField
-        nameList={[
-          {
-            name: "product_policies.warranty_info",
-            title: t("WarrantyInfo"),
-            placeholder: t('e.g., "12 months limited warranty"'),
-          },
-          {
-            name: "product_policies.return_policy",
-            title: t("ReturnPolicy"),
-            type: "textarea",
-            rows: 3,
-            placeholder: t("Enter return policy text"),
-          },
-          {
-            name: "product_policies.refund_policy",
-            title: t("RefundPolicy"),
-            type: "textarea",
-            rows: 3,
-            placeholder: t("Enter refund policy text"),
-          },
-        ]}
-      />
+      <div className="border-top pt-4 mt-4">
+        <h5 className="mb-3">{t("Standardized Policies")}</h5>
+        <p className="text-muted small mb-3">
+          Select pre-defined policies created in Settings.
+        </p>
+
+        {/* 3. Replaced Text Inputs with Dropdowns */}
+
+        {/* Warranty Policy Dropdown */}
+        <SearchableSelectInput
+          nameList={[
+            {
+              name: "product_policies.warranty_info",
+              title: "Warranty Policy",
+              inputprops: {
+                name: "product_policies.warranty_info",
+                id: "product_policies.warranty_info",
+                options: warrantyOptions || [],
+                initialTittle: "Select Warranty Policy",
+              },
+            },
+          ]}
+        />
+
+        {/* Return Policy Dropdown */}
+        <SearchableSelectInput
+          nameList={[
+            {
+              name: "product_policies.return_policy",
+              title: "Return Policy",
+              inputprops: {
+                name: "product_policies.return_policy",
+                id: "product_policies.return_policy",
+                options: returnOptions || [],
+                initialTittle: "Select Return Policy",
+              },
+            },
+          ]}
+        />
+
+        {/* Refund Policy Dropdown */}
+        <SearchableSelectInput
+          nameList={[
+            {
+              name: "product_policies.refund_policy",
+              title: "Refund Policy",
+              inputprops: {
+                name: "product_policies.refund_policy",
+                id: "product_policies.refund_policy",
+                options: refundOptions || [],
+                initialTittle: "Select Refund Policy",
+              },
+            },
+          ]}
+        />
+      </div>
     </Col>
   );
 };

@@ -5,7 +5,7 @@ import { requireAdmin } from "@/utils/auth/serverAuth";
 
 /**
  * GET /api/variant
- * Retrieves all variants with pagination
+ * Retrieves all variants with pagination and filtering
  */
 export async function GET(request) {
   try {
@@ -20,9 +20,25 @@ export async function GET(request) {
     const limit = parseInt(searchParams.get("paginate")) || 10;
     const searchQuery = searchParams.get("search") || "";
 
+    // Get Filter Params
+    const status = searchParams.get("status");
+    const input_type = searchParams.get("input_type");
+
     let query = {};
+
+    // 1. Search Logic
     if (searchQuery) {
       query.variant_name = { $regex: searchQuery, $options: "i" };
+    }
+
+    // 2. Status Filter (Converts 1/0 to true/false for internal 'active' field)
+    if (status !== null && status !== undefined && status !== "") {
+      query.active = parseInt(status) === 1;
+    }
+
+    // 3. Input Type Filter
+    if (input_type && input_type !== "") {
+      query.input_type = input_type;
     }
 
     const total = await Variant.countDocuments(query);
@@ -30,21 +46,19 @@ export async function GET(request) {
       .sort({ created_at: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
-      .lean(); // Use .lean() for faster mapping
+      .lean();
 
-    // --- FIX 1: Transform data to match ShowTable ---
     const transformedVariants = variants.map((variant) => ({
       ...variant,
-      status: variant.active ? 1 : 0, // Convert boolean 'active' to numeric 'status'
-      id: variant._id.toString(), // Ensure 'id' exists
+      status: variant.active ? 1 : 0,
+      id: variant._id.toString(),
     }));
 
-    // --- FIX 2: Return JSON in the exact format your TableWrapper expects ---
     return NextResponse.json({
       success: true,
       message: "Variants fetched successfully",
       data: {
-        data: transformedVariants, // Nested data array
+        data: transformedVariants,
         current_page: page,
         per_page: limit,
         total: total,
@@ -66,7 +80,6 @@ export async function GET(request) {
 
 /**
  * POST /api/variant
- * Creates a new variant type (e.g., Color)
  */
 export async function POST(request) {
   try {
@@ -90,8 +103,8 @@ export async function POST(request) {
       variant_name,
       description,
       input_type,
-      options: options || [], // Options can be added now or later
-      created_by: authCheck?.user?.id || null, // You had this correct
+      options: options || [],
+      created_by: authCheck?.authData?.userId || null,
     });
 
     await newVariant.save();
@@ -109,13 +122,52 @@ export async function POST(request) {
     if (error.code === 11000) {
       return NextResponse.json(
         { success: false, message: "A variant with this name already exists" },
-        { status: 409 } // Conflict
+        { status: 409 }
       );
     }
     return NextResponse.json(
       {
         success: false,
         message: "Failed to create variant",
+        error: error.message,
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/variant
+ * Handles bulk deletion
+ */
+export async function DELETE(request) {
+  try {
+    await dbConnect();
+    const authCheck = await requireAdmin(request);
+    if (!authCheck.success) return authCheck.errorResponse;
+
+    const body = await request.json();
+    const { ids } = body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json(
+        { success: false, message: "No variant IDs provided" },
+        { status: 400 }
+      );
+    }
+
+    const result = await Variant.deleteMany({ _id: { $in: ids } });
+
+    return NextResponse.json({
+      success: true,
+      message: `${result.deletedCount} variants deleted successfully`,
+    });
+  } catch (error) {
+    console.error("❌ Bulk DELETE /api/variant Error:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to delete variants",
         error: error.message,
       },
       { status: 500 }
