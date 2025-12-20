@@ -20,22 +20,27 @@ const ContentPoliciesTab = ({ values, setFieldValue }) => {
     () => request({ url: "/policy", params: { status: 1 } }, router),
     {
       refetchOnWindowFocus: false,
-      select: (data) => data.data.data, // Extract the array of policies
+      select: (response) => {
+        // API response structure: { data: { data: { data: [...] } } }
+        // response.data.data.data is the array of policies
+        const policies = response?.data?.data?.data || response?.data?.data || [];
+        return Array.isArray(policies) ? policies : [];
+      },
     }
   );
 
   // 2. Filter Policies by Type for Dropdowns
   const warrantyOptions = allPolicies
     ?.filter((p) => p.type === "warranty")
-    .map((p) => ({ id: p._id, name: p.name }));
+    .map((p) => ({ id: p._id, name: p.name })) || [];
 
   const returnOptions = allPolicies
     ?.filter((p) => p.type === "return")
-    .map((p) => ({ id: p._id, name: p.name }));
+    .map((p) => ({ id: p._id, name: p.name })) || [];
 
   const refundOptions = allPolicies
     ?.filter((p) => p.type === "refund")
-    .map((p) => ({ id: p._id, name: p.name }));
+    .map((p) => ({ id: p._id, name: p.name })) || [];
 
   return (
     <Col>
