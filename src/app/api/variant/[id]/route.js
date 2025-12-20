@@ -9,7 +9,7 @@ import { requireAdmin } from "@/utils/auth/serverAuth";
  * Retrieves a single variant by its ID
  */
 export async function GET(request, { params }) {
-  const { id } = params;
+  const { id } = await params; // Await params for Next.js 13+
   try {
     await dbConnect();
     const authCheck = await requireAdmin(request);
@@ -40,7 +40,7 @@ export async function GET(request, { params }) {
  * Updates a single variant (name, description, options, etc.)
  */
 export async function PUT(request, { params }) {
-  const { id } = params;
+  const { id } = await params; // Await params for Next.js 13+
   try {
     await dbConnect();
     const authCheck = await requireAdmin(request);
@@ -95,7 +95,7 @@ export async function PUT(request, { params }) {
  * Deletes a single variant
  */
 export async function DELETE(request, { params }) {
-  const { id } = params;
+  const { id } = await params; // Await params for Next.js 13+
   try {
     await dbConnect();
     const authCheck = await requireAdmin(request);

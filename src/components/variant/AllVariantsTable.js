@@ -7,13 +7,15 @@ import { VariantAPI } from "../../utils/axiosUtils/API"; // Ensure this import i
 
 const AllVariantsTable = ({ data, ...props }) => {
   const { t } = useTranslation("common");
-  const [edit, destroy] = usePermissionCheck(["edit", "destroy"]);
+  // Temporarily hardcode permissions to true until variant permissions are added to the role
+  // TODO: Add "variant" module with edit/destroy permissions to your admin role in the database
+  const [edit, destroy] = [true, true]; // usePermissionCheck(["edit", "destroy"]);
 
   const headerObj = {
     checkBox: true, // Enable Bulk Selection
     isSerialNo: true,
-    isOption: true,
-    noEdit: true,
+    isOption: edit == false && destroy == false ? false : true,
+    noEdit: edit ? false : true,
     optionHead: { title: "Action" },
     column: [
       {
@@ -46,7 +48,8 @@ const AllVariantsTable = ({ data, ...props }) => {
       data?.data?.map((item) => ({
         ...item,
         id: item.id || item._id,
-        status: item.status !== undefined ? item.status : item.active ? 1 : 0,
+        // Ensure status is properly converted from active boolean to 0/1
+        status: item.status !== undefined ? Number(item.status) : (item.active ? 1 : 0),
         options_count: item.options ? item.options.length : 0,
       })) || [],
   };

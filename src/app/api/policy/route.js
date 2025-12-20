@@ -9,16 +9,38 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type"); // Optional: filter by type (warranty/return/refund)
     const status = searchParams.get("status");
+    const page = parseInt(searchParams.get("page")) || 1;
+    const limit = parseInt(searchParams.get("paginate")) || 15;
 
     let query = {};
     if (type) query.type = type;
-    if (status) query.status = status === "1" || status === "true";
+    if (status !== null && status !== undefined && status !== "") {
+      query.status = status === "1" || status === "true";
+    }
 
-    const policies = await Policy.find(query).sort({ createdAt: -1 });
+    const total = await Policy.countDocuments(query);
+    const policies = await Policy.find(query)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean();
+
+    const transformedPolicies = policies.map((policy) => ({
+      ...policy,
+      status: policy.status ? 1 : 0,
+      id: policy._id.toString(),
+    }));
 
     return NextResponse.json({
       success: true,
-      data: policies,
+      message: "Policies fetched successfully",
+      data: {
+        data: transformedPolicies,
+        current_page: page,
+        per_page: limit,
+        total: total,
+        last_page: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
     return NextResponse.json(

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Form, Formik } from "formik";
-import { Row, Col } from "reactstrap";
+import { Row, Col, Card, CardBody } from "reactstrap";
 import * as Yup from "yup";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/navigation";
@@ -9,11 +9,35 @@ import SearchableSelectInput from "@/components/inputFields/SearchableSelectInpu
 import Btn from "@/elements/buttons/Btn";
 import request from "@/utils/axiosUtils";
 import { toast } from "react-toastify";
+import useCustomQuery from "@/utils/hooks/useCustomQuery";
+import Loader from "@/components/commonComponent/Loader";
 
-const PolicyForm = ({ updateId, oldData }) => {
+const PolicyForm = ({ updateId, oldData, title, buttonName }) => {
   const { t } = useTranslation("common");
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch policy data if in edit mode
+  const { data: policyResponse, isLoading: isPolicyLoading } = useCustomQuery(
+    [`/policy/${updateId}`],
+    () => request({ url: `/policy/${updateId}` }, router),
+    {
+      enabled: !!updateId,
+      refetchOnWindowFocus: false,
+    }
+  );
+
+  // Get policy data from API response or fallback to oldData
+  // API response structure: { data: { success: true, data: {...} } }
+  // So we need policyResponse.data.data
+  const existingPolicy = updateId 
+    ? policyResponse?.data?.data 
+    : oldData;
+
+  // Debug logging
+  console.log("🔍 PolicyForm - updateId:", updateId);
+  console.log("🔍 PolicyForm - policyResponse:", policyResponse);
+  console.log("🔍 PolicyForm - existingPolicy:", existingPolicy);
 
   // Validation Schema
   const validationSchema = Yup.object().shape({
@@ -23,13 +47,13 @@ const PolicyForm = ({ updateId, oldData }) => {
     status: Yup.boolean(),
   });
 
-  // Initial Values
-  const initialValues = {
-    name: oldData?.name || "",
-    type: oldData?.type || "return",
-    description: oldData?.description || "",
-    status: oldData?.status !== undefined ? oldData.status : true,
-  };
+  // Function to get initial values
+  const getInitialValues = () => ({
+    name: existingPolicy?.name || "",
+    type: existingPolicy?.type || "return",
+    description: existingPolicy?.description || "",
+    status: existingPolicy?.status !== undefined ? existingPolicy.status : true,
+  });
 
   // Type Options
   const typeOptions = [
@@ -38,11 +62,21 @@ const PolicyForm = ({ updateId, oldData }) => {
     { id: "refund", name: "Refund Policy" },
   ];
 
+  // Show loader while fetching data in edit mode
+  if (updateId && isPolicyLoading) {
+    return <Loader />;
+  }
+
   return (
-    <Formik
-      enableReinitialize
-      initialValues={initialValues}
-      validationSchema={validationSchema}
+    <Card>
+      <CardBody>
+        <div className="title-header option-title">
+          <h5>{t(title || "PolicyForm")}</h5>
+        </div>
+        <Formik
+          enableReinitialize
+          initialValues={getInitialValues()}
+          validationSchema={validationSchema}
       onSubmit={async (values) => {
         setIsLoading(true);
         try {
@@ -150,7 +184,7 @@ const PolicyForm = ({ updateId, oldData }) => {
               <Btn
                 className="btn-primary"
                 type="submit"
-                title="Save Policy"
+                title={buttonName || "Save Policy"}
                 loading={isLoading}
               />
             </Col>
@@ -158,6 +192,8 @@ const PolicyForm = ({ updateId, oldData }) => {
         </Form>
       )}
     </Formik>
+      </CardBody>
+    </Card>
   );
 };
 
