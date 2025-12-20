@@ -42,9 +42,20 @@ const ProductForm = ({
     {
       refetchOnWindowFocus: false,
       enabled: !!updateId,
-      select: (data) => data?.data?.data,
+      select: (data) => {
+        console.log("🔍 API Response received:", data);
+        console.log("🔍 Extracted data:", data?.data?.data);
+        return data?.data?.data;
+      },
     }
   );
+
+  console.log("📊 Current state:", {
+    updateId,
+    hasOldData: !!oldData,
+    isLoading: oldDataLoading,
+    oldData,
+  });
 
   useEffect(() => {
     if (updateId && !saveButton) {
@@ -52,76 +63,85 @@ const ProductForm = ({
     }
   }, [updateId, saveButton, refetch]);
 
-  // --- MODIFIED: Initialize ALL new fields correctly ---
-  const watchEvent = useCallback(
-    (oldData, updateId) => {
-      const values = ProductInitValues(oldData, updateId);
+  // --- MODIFIED: Generate initial values based on oldData ---
+  const getInitialValues = () => {
+    if (!updateId) {
+      // For new products, return empty initial values
+      return ProductInitValues(null, null);
+    }
 
-      // 1. General & Pricing
-      values.standard_price = oldData?.standard_price || "";
-      values.allowed_conditions = oldData?.allowed_conditions || [];
+    if (!oldData) {
+      // Data is still loading, return empty values
+      return ProductInitValues(null, null);
+    }
 
-      // 2. Global Identifiers
-      values.upc = oldData?.upc || "";
-      values.ean = oldData?.ean || "";
-      values.gtin = oldData?.gtin || "";
-      values.isbn = oldData?.isbn || "";
-      values.mpn = oldData?.mpn || "";
+    // Data has loaded, populate all fields
+    const values = ProductInitValues(oldData, updateId);
 
-      // 3. Related Products Config (Nested)
-      values.related_product_config = {
-        is_manual: oldData?.related_product_config?.is_manual ?? true,
-        auto_rules: {
-          by_tags:
-            oldData?.related_product_config?.auto_rules?.by_tags ?? false,
-          tag_ids: oldData?.related_product_config?.auto_rules?.tag_ids ?? [],
-          by_category:
-            oldData?.related_product_config?.auto_rules?.by_category ?? false,
-          category_ids:
-            oldData?.related_product_config?.auto_rules?.category_ids ?? [],
-        },
+    // 1. General & Pricing
+    values.standard_price = oldData.standard_price || "";
+    values.allowed_conditions = oldData.allowed_conditions || [];
+
+    // 2. Global Identifiers
+    values.upc = oldData.upc || "";
+    values.ean = oldData.ean || "";
+    values.gtin = oldData.gtin || "";
+    values.isbn = oldData.isbn || "";
+    values.mpn = oldData.mpn || "";
+
+    // 3. Related Products Config (Nested)
+    values.related_product_config = {
+      is_manual: oldData.related_product_config?.is_manual ?? true,
+      auto_rules: {
+        by_tags:
+          oldData.related_product_config?.auto_rules?.by_tags ?? false,
+        tag_ids: oldData.related_product_config?.auto_rules?.tag_ids ?? [],
+        by_category:
+          oldData.related_product_config?.auto_rules?.by_category ?? false,
+        category_ids:
+          oldData.related_product_config?.auto_rules?.category_ids ?? [],
+      },
+    };
+
+    // 4. Upsell Config (Nested)
+    values.upsell_product_config = {
+      is_manual: oldData.upsell_product_config?.is_manual ?? true,
+      auto_rules: {
+        by_tags: oldData.upsell_product_config?.auto_rules?.by_tags ?? false,
+        tag_ids: oldData.upsell_product_config?.auto_rules?.tag_ids ?? [],
+        by_category:
+          oldData.upsell_product_config?.auto_rules?.by_category ?? false,
+        category_ids:
+          oldData.upsell_product_config?.auto_rules?.category_ids ?? [],
+        by_collection:
+          oldData.upsell_product_config?.auto_rules?.by_collection ?? false,
+        collection_ids:
+          oldData.upsell_product_config?.auto_rules?.collection_ids ?? [],
+      },
+    };
+
+    // 5. Policies (Sanitize nulls to empty string for Formik control)
+    if (oldData.product_policies) {
+      values.product_policies = {
+        ...values.product_policies,
+        return_policy: oldData.product_policies.return_policy || "",
+        refund_policy: oldData.product_policies.refund_policy || "",
+        warranty_info: oldData.product_policies.warranty_info || "",
+        about_this_item: oldData.product_policies.about_this_item || "",
+        key_features: oldData.product_policies.key_features || [],
       };
+    }
 
-      // 4. Upsell Config (Nested)
-      values.upsell_product_config = {
-        is_manual: oldData?.upsell_product_config?.is_manual ?? true,
-        auto_rules: {
-          by_tags: oldData?.upsell_product_config?.auto_rules?.by_tags ?? false,
-          tag_ids: oldData?.upsell_product_config?.auto_rules?.tag_ids ?? [],
-          by_category:
-            oldData?.upsell_product_config?.auto_rules?.by_category ?? false,
-          category_ids:
-            oldData?.upsell_product_config?.auto_rules?.category_ids ?? [],
-          by_collection:
-            oldData?.upsell_product_config?.auto_rules?.by_collection ?? false,
-          collection_ids:
-            oldData?.upsell_product_config?.auto_rules?.collection_ids ?? [],
-        },
-      };
-
-      // 5. Policies (Sanitize nulls to empty string for Formik control)
-      if (oldData?.product_policies) {
-        values.product_policies = {
-          ...values.product_policies,
-          return_policy: oldData.product_policies.return_policy || "",
-          refund_policy: oldData.product_policies.refund_policy || "",
-          warranty_info: oldData.product_policies.warranty_info || "",
-          about_this_item: oldData.product_policies.about_this_item || "",
-          key_features: oldData.product_policies.key_features || [],
-        };
-      }
-
-      return values;
-    },
-    [oldData, updateId]
-  );
+    console.log("✅ Generated initial values for product:", values);
+    return values;
+  };
 
   if (updateId && oldDataLoading) return <Loader />;
 
   return (
     <Formik
       enableReinitialize={true}
-      initialValues={{ ...watchEvent(oldData, updateId) }}
+      initialValues={getInitialValues()}
       validationSchema={YupObject({
         ...ProductValidationSchema,
         standard_price: Yup.number().min(0).nullable(),

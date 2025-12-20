@@ -3,11 +3,30 @@ import dbConnect from "@/lib/dbConnect";
 import Product from "@/models/Products";
 import Category from "@/models/Category";
 import Brand from "@/models/Brand";
+import mongoose from "mongoose";
 import { requireAdmin, requireAuth } from "@/utils/auth/serverAuth";
 import {
   uploadToCloudinary,
   deleteFromCloudinary,
 } from "@/utils/cloudinary/cloudinaryService";
+
+/**
+ * Helper function to find all child categories recursively
+ */
+async function findAllChildCategories(parentId) {
+  const allIds = [parentId]; // Include the parent itself
+  
+  // Find direct children
+  const children = await Category.find({ parent_id: parentId }).select('_id').lean();
+  
+  // Recursively find grandchildren
+  for (const child of children) {
+    const grandChildren = await findAllChildCategories(child._id);
+    allIds.push(...grandChildren);
+  }
+  
+  return allIds;
+}
 
 /**
  * GET /api/product - Get all MASTER products
@@ -31,11 +50,23 @@ export async function GET(request) {
 
     const searchParams = request?.nextUrl?.searchParams;
     const querySearch = searchParams.get("search");
-    const queryCategory = searchParams.get("category_id"); // Get Category Filter
+    const queryCategory = searchParams.get("category_id"); // Single category filter
+    const queryCategoryIds = searchParams.get("category_ids"); // Multiple categories filter
+    const queryBrandIds = searchParams.get("brand_ids"); // Brand filter support
     const queryExport = searchParams.get("export"); // Get Export Flag
 
     const queryPage = parseInt(searchParams.get("page")) || 1;
     const queryLimit = parseInt(searchParams.get("paginate")) || 10;
+
+    // Debug logging
+    console.log("🔍 Product API GET - Query params:", {
+      querySearch,
+      queryCategory,
+      queryCategoryIds,
+      queryBrandIds,
+      queryPage,
+      queryLimit,
+    });
 
     let query = {};
 
@@ -47,10 +78,60 @@ export async function GET(request) {
       ];
     }
 
-    // 2. Filter by Category
+    // 2. Filter by Category (Single or Multiple) - HIERARCHICAL SUPPORT
     if (queryCategory) {
-      query.category_id = queryCategory;
+      // Convert single category ID to ObjectId
+      try {
+        const categoryId = new mongoose.Types.ObjectId(queryCategory);
+        
+        // Find all child categories recursively
+        const allCategoryIds = await findAllChildCategories(categoryId);
+        
+        // Include the parent category itself plus all children
+        query.category_id = { $in: allCategoryIds };
+      } catch (e) {
+        console.error("❌ Invalid category_id format:", queryCategory);
+      }
+    } else if (queryCategoryIds) {
+      // Support comma-separated category IDs - convert to ObjectIds and include children
+      const categoryIdArray = queryCategoryIds.split(",").filter(Boolean);
+      if (categoryIdArray.length > 0) {
+        try {
+          const categoryObjectIds = categoryIdArray.map(id => new mongoose.Types.ObjectId(id.trim()));
+          
+          // Find all child categories for each selected category
+          let allCategoryIds = [];
+          for (const catId of categoryObjectIds) {
+            const childIds = await findAllChildCategories(catId);
+            allCategoryIds = allCategoryIds.concat(childIds);
+          }
+          
+          // Remove duplicates
+          allCategoryIds = [...new Set(allCategoryIds.map(id => id.toString()))].map(id => new mongoose.Types.ObjectId(id));
+          
+          query.category_id = { $in: allCategoryIds };
+        } catch (e) {
+          console.error("❌ Invalid category_ids format:", queryCategoryIds);
+        }
+      }
     }
+
+    // 3. Filter by Brand (Multiple support)
+    if (queryBrandIds) {
+      const brandIdArray = queryBrandIds.split(",").filter(Boolean);
+      if (brandIdArray.length > 0) {
+        try {
+          query.brand_id = { 
+            $in: brandIdArray.map(id => new mongoose.Types.ObjectId(id.trim()))
+          };
+        } catch (e) {
+          console.error("❌ Invalid brand_ids format:", queryBrandIds);
+        }
+      }
+    }
+
+    // Debug: Log the final query
+    console.log("🔍 Product API - Final MongoDB query:", JSON.stringify(query, null, 2));
 
     // Default sort: newest first
     const sortOptions = { created_at: -1 };

@@ -38,6 +38,7 @@ export function ProductInitValues(oldData, updateId) {
   console.log("🚀 Master ProductInitValues called with:", {
     oldData,
     updateId,
+    hasData: !!oldData,
   });
 
   // Extract the actual IDs from populated fields if they exist
@@ -46,7 +47,9 @@ export function ProductInitValues(oldData, updateId) {
     // If category_id is already a string ID, use it directly
     if (typeof oldData.category_id === "string") return oldData.category_id;
     // If it's a populated object, extract the _id
-    return oldData.category_id?._id || "";
+    const catId = oldData.category_id?._id || "";
+    console.log("📦 Category ID extracted:", catId);
+    return catId;
   };
 
   const getBrandId = () => {
@@ -54,7 +57,9 @@ export function ProductInitValues(oldData, updateId) {
     // If brand_id is already a string ID, use it directly
     if (typeof oldData.brand_id === "string") return oldData.brand_id;
     // If it's a populated object, extract the _id or id
-    return oldData.brand_id?._id || oldData.brand_id?.id || "";
+    const brandId = oldData.brand_id?._id || oldData.brand_id?.id || "";
+    console.log("🏷️ Brand ID extracted:", brandId);
+    return brandId;
   };
 
   // Ensure product_policies has all required fields

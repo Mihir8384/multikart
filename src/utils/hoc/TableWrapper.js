@@ -10,7 +10,7 @@ import useCustomQuery from "../hooks/useCustomQuery";
 import { da } from "date-fns/locale";
 
 const TableWrapper = (WrappedComponent) => {
-  const HocComponent = forwardRef(({ url, loading, moduleName, setFieldValue, userIdParams, type, paramsProps, onlyTitle, isCheck, setIsCheck, isReplicate, dateRange, filterHeader, importExport, keyInPermission, ...props }, ref) => {
+  const HocComponent = forwardRef(({ url, loading, moduleName, setFieldValue, userIdParams, type, paramsProps, onlyTitle, isCheck, setIsCheck, isReplicate, dateRange, filterHeader, importExport, keyInPermission, advanceFilter, showFilterDifferentPlace, ...props }, ref) => {
     const router = useRouter();
     const [paginate, setPaginate] = useState(15);
     const [page, setPage] = useState(1);
@@ -18,6 +18,10 @@ const TableWrapper = (WrappedComponent) => {
     const [date, setDate] = useState([{ startDate: null, endDate: null, key: "selection" }]);
     const [sortBy, setSortBy] = useState({ field: "", sort: "asc" });
     let ifParamsData = paramsProps ? Object.keys(paramsProps)[0] : "";
+    
+    // Create a stable string representation of paramsProps for dependency tracking
+    const paramsPropsString = paramsProps ? JSON.stringify(paramsProps) : "";
+    
     const { data, isLoading, refetch, fetchStatus } = useCustomQuery(
       [url],
       () =>
@@ -41,7 +45,7 @@ const TableWrapper = (WrappedComponent) => {
 
     useEffect(() => {
       (!loading || url) && refetch();
-    }, [paginate, page, date, search, loading, sortBy, type, paramsProps ? paramsProps[ifParamsData] : ""]);
+    }, [paginate, page, date, search, loading, sortBy, type, paramsPropsString]);
 
     useEffect(() => {
       if (!data?.data?.length || !data?.data?.data?.length) {
@@ -56,8 +60,8 @@ const TableWrapper = (WrappedComponent) => {
       <>
         <Card>
           <CardBody className="custom-role">
-            <TableTitle moduleName={moduleName} type={type} onlyTitle={onlyTitle} filterHeader={filterHeader} importExport={importExport} refetch={refetch} />
-            {(filterHeader?.noPageDrop !== true || filterHeader?.noSearch !== true) && <TableTop setPaginate={setPaginate} setSearch={setSearch} paginate={paginate} isCheck={isCheck} setIsCheck={setIsCheck} url={url} isReplicate={isReplicate} refetch={refetch} dateRange={dateRange} date={date} setDate={setDate} filterHeader={filterHeader} keyInPermission={keyInPermission} />}
+            <TableTitle moduleName={moduleName} type={type} onlyTitle={onlyTitle} filterHeader={filterHeader} importExport={importExport} refetch={refetch} showFilterDifferentPlace={showFilterDifferentPlace} />
+            {(filterHeader?.noPageDrop !== true || filterHeader?.noSearch !== true) && <TableTop setPaginate={setPaginate} setSearch={setSearch} paginate={paginate} isCheck={isCheck} setIsCheck={setIsCheck} url={url} isReplicate={isReplicate} refetch={refetch} dateRange={dateRange} date={date} setDate={setDate} filterHeader={filterHeader} keyInPermission={keyInPermission} advanceFilter={advanceFilter} showFilterDifferentPlace={showFilterDifferentPlace} />}
             <div className="table-responsive border-table">
               <WrappedComponent data={userIdParams ? data?.data : data?.data?.data} sortBy={sortBy} setSortBy={setSortBy} moduleName={moduleName} type={type} current_page={userIdParams ? data?.data?.transactions?.current_page : data?.data?.current_page || data?.data?.data?.current_page} per_page={userIdParams ? data?.data?.transactions?.per_page : data?.data?.per_page || data?.data?.data?.current_page} url={url} userIdParams={userIdParams} fetchStatus={fetchStatus} refetch={refetch} isCheck={isCheck} setIsCheck={setIsCheck} {...props} keyInPermission={keyInPermission} />
             </div>

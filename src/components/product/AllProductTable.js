@@ -14,15 +14,19 @@ const AllProductTable = ({ data, ...props }) => {
   const [edit, destroy] = usePermissionCheck(["edit", "destroy"]);
   const router = useRouter();
 
-  // --- 1. FETCH CATEGORIES MANUALLY (Reliable Method) ---
+  // --- 1. FETCH CATEGORIES MANUALLY - Get ALL categories without pagination ---
   const { data: categoryOptions } = useCustomQuery(
     ["categoryFilter"],
     () =>
       request(
         {
           url: Category,
-          // Use 'active' string matching your DB, and is_leaf to only show relevant categories
-          params: { status: 1, type: "product", is_leaf: true },
+          // Get all active product categories (removed is_leaf filter to show all categories)
+          params: { 
+            status: 1, 
+            type: "product",
+            limit: 1000  // Get all categories by setting a high limit
+          },
         },
         router
       ),

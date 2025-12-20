@@ -21,7 +21,7 @@ export async function GET(request, { params }) {
       return authCheck.errorResponse;
     }
 
-    const { updateId } = params;
+    const { updateId } = await params;
 
     if (!updateId) {
       return NextResponse.json(

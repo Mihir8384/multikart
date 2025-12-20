@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Product from "@/models/Products";
 import Category from "@/models/Category";
+import Attribute from "@/models/Attributes";
+import Variant from "@/models/Variant";
+import Brand from "@/models/Brand";
 import { requireAdmin } from "@/utils/auth/serverAuth";
 import {
   uploadToCloudinary,
@@ -18,7 +21,9 @@ import path from "path";
 export async function GET(request, { params }) {
   try {
     await dbConnect();
-    const { updateId } = params;
+    const { updateId } = await params;
+
+    console.log("🔍 GET Product - updateId:", updateId);
 
     if (!updateId) {
       return NextResponse.json(
@@ -40,12 +45,14 @@ export async function GET(request, { params }) {
       );
     }
 
+    console.log("✅ Product found:", product._id);
+
     return NextResponse.json({
       success: true,
       data: product,
     });
   } catch (error) {
-    console.error("Master Product GET single error:", error);
+    console.error("❌ Master Product GET single error:", error);
     return NextResponse.json(
       {
         success: false,
@@ -70,7 +77,9 @@ export async function PUT(request, { params }) {
       return authCheck.errorResponse;
     }
 
-    const { updateId } = params;
+    const { updateId } = await params;
+    console.log("🔍 PUT Product - updateId:", updateId);
+    
     if (!updateId) {
       return NextResponse.json(
         { success: false, message: "Product ID is required" },
@@ -313,7 +322,9 @@ export async function DELETE(request, { params }) {
     if (!authCheck.success) {
       return authCheck.errorResponse;
     }
-    const { updateId } = params;
+    const { updateId } = await params;
+    console.log("🔍 DELETE Product - updateId:", updateId);
+    
     if (!updateId) {
       return NextResponse.json(
         { success: false, message: "Product ID is required" },

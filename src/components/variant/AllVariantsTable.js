@@ -9,37 +9,6 @@ const AllVariantsTable = ({ data, ...props }) => {
   const { t } = useTranslation("common");
   const [edit, destroy] = usePermissionCheck(["edit", "destroy"]);
 
-  // --- 1. Filter Configuration ---
-  const filterHeader = {
-    useSpecific: false,
-    filter: [
-      {
-        name: "status",
-        title: "Status",
-        type: "select",
-        options: [
-          { id: "1", name: "Active" },
-          { id: "0", name: "Inactive" },
-        ],
-        key: "id",
-        value: "name",
-      },
-      {
-        name: "input_type",
-        title: "Input Type",
-        type: "select",
-        options: [
-          { id: "dropdown", name: "Dropdown" },
-          { id: "radio", name: "Radio" },
-          { id: "color", name: "Color" },
-          { id: "image", name: "Image" },
-        ],
-        key: "id",
-        value: "name",
-      },
-    ],
-  };
-
   const headerObj = {
     checkBox: true, // Enable Bulk Selection
     isSerialNo: true,
@@ -91,7 +60,6 @@ const AllVariantsTable = ({ data, ...props }) => {
         headerData={headerObj}
         editPermission={edit}
         destroyPermission={destroy}
-        filterHeader={filterHeader}
         url={VariantAPI} // Connects the table to the Variant API
         keyInPermission={"variant"}
       />
