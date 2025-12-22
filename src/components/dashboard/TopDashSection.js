@@ -156,7 +156,7 @@ const TopDashSection = ({ role }) => {
                     />
                   </div>
                   <div>
-                    <h6>{t("TotalStores")}</h6>
+                    <h6>{t("TotalVendors")}</h6>
                     <h2>
                       {stats?.total_stores ??
                         stats?.totalStores ??

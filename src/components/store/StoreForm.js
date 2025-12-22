@@ -18,7 +18,7 @@ import { StoreValidationSchema } from "./widgets/StoreValidationSchema";
 import StoreVendor from "./widgets/StoreVendor";
 import useCustomQuery from "@/utils/hooks/useCustomQuery";
 
-const StoreForm = ({ updateId, buttonName }) => {
+const StoreForm = ({ updateId, buttonName, mutate, loading }) => {
   const { t } = useTranslation("common");
   const router = useRouter();
   const {
@@ -29,11 +29,12 @@ const StoreForm = ({ updateId, buttonName }) => {
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     enabled: false,
-    select: (data) => data?.data,
+    select: (res) => res?.data?.data || res?.data,
   });
   useEffect(() => {
     updateId && refetch();
   }, [updateId]);
+  
   if (updateId && isLoading) return <Loader />;
   return (
     <>
@@ -46,18 +47,21 @@ const StoreForm = ({ updateId, buttonName }) => {
           password_confirmation: !updateId && passwordConfirmationSchema,
         })}
         onSubmit={(values) => {
-          // Put Your Logic Here
-          router.push(`/store`);
+          if (updateId) {
+            mutate(values);
+          } else {
+            mutate(values);
+          }
         }}
       >
         {({ setFieldValue, values, errors, touched }) => (
           <Form className="theme-form theme-form-2 mega-form">
             <Row>
-              <FileUploadField values={values} setFieldValue={setFieldValue} title="StoreLogo" type="file" id="store_logo_id" name="store_logo_id" updateId={updateId} errors={errors} touched={touched} helpertext={getHelperText("500x500px")} />
+              <FileUploadField values={values} setFieldValue={setFieldValue} title="VendorLogo" type="file" id="store_logo_id" name="store_logo_id" updateId={updateId} errors={errors} touched={touched} helpertext={getHelperText("500x500px")} />
               <SimpleInputField
                 nameList={[
-                  { name: "store_name", placeholder: t("EnterStoreName"), require: "true" },
-                  { name: "description", title: "StoreDescription", type: "textarea", placeholder: t("EnterDescription"), require: "true" },
+                  { name: "store_name", title: "VendorName", placeholder: t("EnterVendorName"), require: "true" },
+                  { name: "description", title: "VendorDescription", type: "textarea", placeholder: t("EnterDescription"), require: "true" },
                 ]}
               />
               <AddressComponent values={values} />

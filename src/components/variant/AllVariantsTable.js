@@ -8,8 +8,8 @@ import { VariantAPI } from "../../utils/axiosUtils/API"; // Ensure this import i
 const AllVariantsTable = ({ data, ...props }) => {
   const { t } = useTranslation("common");
   // Temporarily hardcode permissions to true until variant permissions are added to the role
-  // TODO: Add "variant" module with edit/destroy permissions to your admin role in the database
-  const [edit, destroy] = [true, true]; // usePermissionCheck(["edit", "destroy"]);
+  // TODO: Add "variant" module with create/edit/destroy permissions to your admin role in the database
+  const [create, edit, destroy] = [true, true, true]; // usePermissionCheck(["create", "edit", "destroy"]);
 
   const headerObj = {
     checkBox: true, // Enable Bulk Selection

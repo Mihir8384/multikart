@@ -127,14 +127,14 @@ const storeSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    // country: {
-    //   type: String,
-    //   required: true,
-    // },
-    // state: {
-    //   type: String,
-    //   required: true,
-    // },
+    country: {
+      type: String,
+      default: null,
+    },
+    state: {
+      type: String,
+      default: null,
+    },
     city: String,
     address: String,
     pincode: String,
@@ -196,8 +196,15 @@ const storeSchema = new mongoose.Schema(
   },
   {
     timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
+
+// Add virtual for ID (to match frontend expectations)
+storeSchema.virtual("id").get(function () {
+  return this._id.toHexString();
+});
 
 // Add indexes for better query performance
 storeSchema.index({ vendor_id: 1 });

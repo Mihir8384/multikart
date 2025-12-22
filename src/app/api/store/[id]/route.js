@@ -15,16 +15,16 @@ export async function GET(request, { params }) {
       return authCheck.errorResponse;
     }
 
-    const { updateId } = await params;
+    const { id } = await params;
 
-    if (!updateId) {
+    if (!id) {
       return NextResponse.json(
         { success: false, message: "Store ID is required" },
         { status: 400 }
       );
     }
 
-    const store = await Store.findById(updateId)
+    const store = await Store.findById(id)
       .populate("owner_user_id", "name email phone country_code")
       .lean();
 
@@ -46,10 +46,7 @@ export async function GET(request, { params }) {
         email: store.owner_user_id.email,
         phone: store.owner_user_id.phone,
         country_code: store.owner_user_id.country_code
-      } : null,
-      // Add country and state for address component
-      country: store.country ? { id: store.country } : null,
-      state: store.state ? { id: store.state } : null,
+      } : null
     };
 
     return NextResponse.json({
@@ -75,17 +72,17 @@ export async function PUT(request, { params }) {
       return authCheck.errorResponse;
     }
 
-    const { updateId } = await params;
+    const { id } = await params;
     const body = await request.json();
 
-    if (!updateId) {
+    if (!id) {
       return NextResponse.json(
         { success: false, message: "Store ID is required" },
         { status: 400 }
       );
     }
 
-    const store = await Store.findById(updateId);
+    const store = await Store.findById(id);
 
     if (!store) {
       return NextResponse.json(
@@ -99,10 +96,6 @@ export async function PUT(request, { params }) {
     if (body.description !== undefined) store.description = body.description;
     if (body.store_logo !== undefined) store.store_logo = body.store_logo;
     if (body.store_logo_id !== undefined) store.store_logo = body.store_logo_id;
-    if (body.country !== undefined) store.country = body.country;
-    if (body.country_id !== undefined) store.country = body.country_id;
-    if (body.state !== undefined) store.state = body.state;
-    if (body.state_id !== undefined) store.state = body.state_id;
     if (body.city !== undefined) store.city = body.city;
     if (body.address !== undefined) store.address = body.address;
     if (body.pincode !== undefined) store.pincode = body.pincode;
@@ -158,16 +151,16 @@ export async function DELETE(request, { params }) {
       return authCheck.errorResponse;
     }
 
-    const { updateId } = await params;
+    const { id } = await params;
 
-    if (!updateId) {
+    if (!id) {
       return NextResponse.json(
         { success: false, message: "Store ID is required" },
         { status: 400 }
       );
     }
 
-    const store = await Store.findByIdAndDelete(updateId);
+    const store = await Store.findByIdAndDelete(id);
 
     if (!store) {
       return NextResponse.json(

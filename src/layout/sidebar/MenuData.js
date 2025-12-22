@@ -109,21 +109,21 @@ const MENUITEMS = [
     ],
   },
   {
-    title: "Stores",
-    displayTitle: "Store",
+    title: "Vendors",
+    displayTitle: "Vendor",
     icon: <RiStore2Line />,
     type: "sub",
     children: [
       {
-        title: "AddStore",
+        title: "AddVendor",
         path: "/store/create",
-        displayTitle: "Add Store",
+        displayTitle: "Add Vendor",
         permission: ["store.create"],
       },
       {
-        title: "AllStores",
+        title: "AllVendors",
         path: "/store",
-        displayTitle: "All Stores",
+        displayTitle: "All Vendors",
         badgeType: "badge bg-warning text-dark ml-3",
         badgeValue: 0,
         permission: ["store.index"],

@@ -89,6 +89,17 @@ export function ProductInitValues(oldData, updateId) {
     brand_id: getBrandId(),
     status: updateId ? oldData?.status || "inactive" : "inactive",
 
+    // Pricing & Conditions
+    standard_price: updateId ? oldData?.standard_price || "" : "",
+    allowed_conditions: updateId ? oldData?.allowed_conditions || [] : [],
+
+    // Global Identifiers
+    upc: updateId ? oldData?.upc || "" : "",
+    ean: updateId ? oldData?.ean || "" : "",
+    gtin: updateId ? oldData?.gtin || "" : "",
+    isbn: updateId ? oldData?.isbn || "" : "",
+    mpn: updateId ? oldData?.mpn || "" : "",
+
     // Media
     media: updateId ? oldData?.media || [] : [],
     new_media_files: [],
@@ -96,6 +107,52 @@ export function ProductInitValues(oldData, updateId) {
 
     // Product Policies (Deliverable 4)
     product_policies: productPolicies,
+
+    // Related Products Configuration
+    related_product_config: updateId ? oldData?.related_product_config || {
+      is_manual: true,
+      auto_rules: {
+        by_tags: false,
+        tag_ids: [],
+        by_category: false,
+        category_ids: []
+      }
+    } : {
+      is_manual: true,
+      auto_rules: {
+        by_tags: false,
+        tag_ids: [],
+        by_category: false,
+        category_ids: []
+      }
+    },
+
+    // Upsell Products Configuration
+    upsell_product_config: updateId ? oldData?.upsell_product_config || {
+      is_manual: true,
+      auto_rules: {
+        by_tags: false,
+        tag_ids: [],
+        by_category: false,
+        category_ids: [],
+        by_collection: false,
+        collection_ids: []
+      }
+    } : {
+      is_manual: true,
+      auto_rules: {
+        by_tags: false,
+        tag_ids: [],
+        by_category: false,
+        category_ids: [],
+        by_collection: false,
+        collection_ids: []
+      }
+    },
+
+    // Related & Cross-sell Products
+    related_products: updateId ? oldData?.related_products || [] : [],
+    cross_sell_products: updateId ? oldData?.cross_sell_products || [] : [],
 
     // Taxonomy Mappings (Deliverable 3 link)
     attribute_values: updateId ? oldData?.attribute_values || [] : [],

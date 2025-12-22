@@ -3,13 +3,14 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Col } from "reactstrap";
 import { useTranslation } from "react-i18next";
+import { FiPlus } from "react-icons/fi";
 import Btn from "@/elements/buttons/Btn";
-import { VariantAPI } from "@/utils/axiosUtils/API"; // Using the correct Uppercase export
+import { VariantAPI } from "@/utils/axiosUtils/API";
 import AllVariantsTable from "@/components/variant/AllVariantsTable";
 import { Form, Formik } from "formik";
 import MultiSelectField from "@/components/inputFields/MultiSelectField";
 
-const VariantList = () => {
+const AllVariants = () => {
   const [isCheck, setIsCheck] = useState([]);
   const router = useRouter();
   const { t } = useTranslation("common");
@@ -30,22 +31,6 @@ const VariantList = () => {
 
   return (
     <Col sm="12">
-      <div className="title-header option-title">
-        <h5>{t("Variants")}</h5>
-        <div className="right-options">
-          <ul>
-            <li>
-              <Btn
-                className="btn-primary"
-                onClick={() => router.push("/variant/create")}
-              >
-                <i className="ri-add-line"></i> {t("AddVariant")}
-              </Btn>
-            </li>
-          </ul>
-        </div>
-      </div>
-
       <Formik initialValues={{ status: "", input_type: "" }}>
         {({ values, setFieldValue }) => {
           // Build params object, excluding empty filters
@@ -60,8 +45,20 @@ const VariantList = () => {
                 moduleName="Variant"
                 isCheck={isCheck}
                 setIsCheck={setIsCheck}
+                type={"product"}
                 paramsProps={paramsProps}
                 showFilterDifferentPlace
+                filterHeader={{
+                  customFilter: (
+                    <Btn
+                      className="align-items-center btn-theme add-button"
+                      title={t("Add") + " " + t("Variant")}
+                      onClick={() => router.push("/variant/create")}
+                    >
+                      <FiPlus />
+                    </Btn>
+                  ),
+                }}
                 advanceFilter={{
                   status: (
                     <MultiSelectField
@@ -97,4 +94,4 @@ const VariantList = () => {
   );
 };
 
-export default VariantList;
+export default AllVariants;

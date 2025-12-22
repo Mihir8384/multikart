@@ -7,7 +7,7 @@ import useCustomMutation from "./useCustomMutation";
 const useCreate = (url, updateId, path = false, message, extraFunction, notHandler, responseType, errFunction) => {
   const router = useRouter();
   const pathname = usePathname();
-  return useCustomMutation((data) => request({ url: updateId ? `${url}/${Array.isArray(updateId) ? updateId.join("/") : updateId}` : url, data, method: "post", responseType: responseType ? responseType : "" }, router), {
+  return useCustomMutation((data) => request({ url: updateId ? `${url}/${Array.isArray(updateId) ? updateId.join("/") : updateId}` : url, data, method: updateId ? "put" : "post", responseType: responseType ? responseType : "" }, router), {
     onSuccess: (resDta) => {
       if (resDta?.response?.data?.success === !true) {
         ToastNotification("error", resDta?.response?.data?.message);

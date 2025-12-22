@@ -9,15 +9,15 @@ import Loader from "@/components/commonComponent/Loader";
 
 const StoreUpdate = () => {
   const params = useParams()
-  const { mutate, isLoading } = useCreate(store, params?.updateId, "/store");
+  const { mutate, isLoading } = useCreate(store, params?.id, "/store");
   
-  if (!params?.updateId) {
+  if (!params?.id) {
     return <Loader />;
   }
   
   return (
     <FormWrapper title="EditVendor">
-      <StoreForm mutate={mutate} updateId={params.updateId} loading={isLoading} buttonName="Update" />
+      <StoreForm mutate={mutate} updateId={params.id} loading={isLoading} buttonName="Update" />
     </FormWrapper>
   );
 };

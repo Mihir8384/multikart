@@ -16,7 +16,7 @@ const TopStoreTable = ({ values, setFieldValue }) => {
         }
     }, [values['filter_by']])
     return (
-        <TopStore url={store} moduleName={'TopStores'} paramsProps={{ ...params }} filterHeader={{
+        <TopStore url={store} moduleName={'TopVendors'} paramsProps={{ ...params }} filterHeader={{
             noPagination: true, noSearch: true, noPageDrop: true, customFilter: <SearchableSelectInput
                 nameList={[
                     {
