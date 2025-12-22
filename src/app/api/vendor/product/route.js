@@ -5,10 +5,6 @@ import Category from "@/models/Category";
 import mongoose from "mongoose";
 import { requireAuth } from "@/utils/auth/serverAuth";
 import { uploadToCloudinary } from "@/utils/cloudinary/cloudinaryService";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { existsSync } from "fs";
-import path from "path";
 
 /**
  * GET /api/vendor/product
@@ -179,24 +175,16 @@ export async function POST(request) {
     const existingSlug = await Product.findOne({ slug });
     if (existingSlug) slug = `${slug}-${Date.now()}`;
 
-    // Handle Files
+    // Handle Files - Upload directly with buffer (Vercel compatible)
     const media = [];
     const product_thumbnail_file = formData.get("product_thumbnail");
 
     if (product_thumbnail_file && product_thumbnail_file.size > 0) {
-      const uploadDir = join(process.cwd(), "uploads", "temp");
-      if (!existsSync(uploadDir)) await mkdir(uploadDir, { recursive: true });
-
       const bytes = await product_thumbnail_file.arrayBuffer();
       const buffer = Buffer.from(bytes);
-      const tempPath = join(
-        uploadDir,
-        `vendor-thumb-${Date.now()}${path.extname(product_thumbnail_file.name)}`
-      );
-      await writeFile(tempPath, buffer);
 
       const uploadResult = await uploadToCloudinary(
-        [{ path: tempPath, originalname: product_thumbnail_file.name }],
+        [{ buffer, originalname: product_thumbnail_file.name }],
         "products"
       );
       media.push({

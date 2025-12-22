@@ -10,10 +10,6 @@ import {
   uploadToCloudinary,
   deleteFromCloudinary,
 } from "@/utils/cloudinary/cloudinaryService";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { existsSync } from "fs";
-import path from "path";
 
 /**
  * GET /api/product/[id] - Get single MASTER product by ID
@@ -209,11 +205,6 @@ export async function PUT(request, { params }) {
       const formData = updateData._formData;
       delete updateData._formData; // Cleanup
 
-      const uploadDir = join(process.cwd(), "uploads", "temp");
-      if (!existsSync(uploadDir)) {
-        await mkdir(uploadDir, { recursive: true });
-      }
-
       let currentMedia = updateData.media || existingProduct.media || [];
 
       try {
@@ -232,15 +223,14 @@ export async function PUT(request, { params }) {
           );
         }
 
-        // Upload new files
+        // Upload new files - pass buffers directly to Cloudinary (Vercel compatible)
         const newMediaFiles = formData.getAll("new_media_files");
         if (newMediaFiles && newMediaFiles.length > 0) {
           for (const file of newMediaFiles) {
             if (file && file.size > 0) {
               const bytes = await file.arrayBuffer();
               const buffer = Buffer.from(bytes);
-              // Use uploadToCloudinary directly with buffer if supported, or temp file
-              // Here using buffer approach supported by your service usually
+              // Upload directly with buffer (no temp files needed for Vercel)
               const uploadResult = await uploadToCloudinary(
                 [{ buffer, originalname: file.name }],
                 "products"

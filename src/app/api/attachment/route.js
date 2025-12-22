@@ -2,9 +2,6 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Attachment from "@/models/Attachment";
 import { uploadToCloudinary } from "@/utils/cloudinary/cloudinaryService";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { existsSync } from "fs";
 
 // GET - Fetch all attachments with pagination
 export async function GET(request) {
@@ -94,27 +91,14 @@ export async function POST(request) {
     
     console.log("📥 Files to process:", files.map(f => ({ name: f.name, type: f.type, size: f.size })));
     
-    // Create temp directory if it doesn't exist
-    const tempDir = join(process.cwd(), 'uploads', 'temp');
-    if (!existsSync(tempDir)) {
-      console.log("📁 Creating temp directory:", tempDir);
-      await mkdir(tempDir, { recursive: true });
-    }
-    
-    // Save files temporarily
+    // Prepare files with buffers for Cloudinary upload (Vercel compatible)
     const tempFiles = [];
     for (const file of files) {
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
       
-      const fileName = `${Date.now()}-${file.name}`;
-      const filePath = join(tempDir, fileName);
-      
-      console.log("💾 Saving temp file:", filePath);
-      await writeFile(filePath, buffer);
-      
       tempFiles.push({
-        path: filePath,
+        buffer,
         originalname: file.name,
         mimetype: file.type,
         size: file.size
