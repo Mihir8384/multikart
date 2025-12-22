@@ -9,7 +9,10 @@ const ReactstrapSelectInput = ({ field, form: { touched, errors, setFieldValue }
   
   const { t } = useTranslation("common");
   const [searchInput, setSearchInput] = useState();
-  const [selectedItems, setSelectedItems] = useState(Array.isArray(field?.value) ? [] : {});
+  // CRITICAL: Initialize with correct type based on field.value
+  const [selectedItems, setSelectedItems] = useState(() => {
+    return Array.isArray(field?.value) ? [] : {};
+  });
   const [list, setList] = useState([]);
   const { ref, isComponentVisible, setIsComponentVisible } = useOutsideDropdown();
   let error = errors[field.name];
@@ -70,13 +73,29 @@ const ReactstrapSelectInput = ({ field, form: { touched, errors, setFieldValue }
         setSelectedItems([]);
         return;
       }
+      
       const sourceList = props.inputprops?.setsearch ? listOpt : list;
+      
       if (!sourceList || sourceList.length === 0) {
         return;
       }
-      const filteredItems = sourceList.filter((elem) => 
-        field.value.some(val => String(val) === String(elem[getValuesKey]))
-      );
+      
+      const filteredItems = sourceList.filter((elem) => {
+        // Get ID with fallbacks, skip if all are undefined
+        const elemId = elem[getValuesKey] || elem.id || elem._id;
+        if (!elemId) {
+          return false; // Skip items without IDs
+        }
+        
+        const isMatch = field.value.some(val => {
+          // Skip undefined/null values in field.value
+          if (!val) return false;
+          return String(val) === String(elemId);
+        });
+        
+        return isMatch;
+      });
+      
       setSelectedItems(filteredItems);
     } else {
       // Setting variables for type String data
@@ -153,7 +172,30 @@ const ReactstrapSelectInput = ({ field, form: { touched, errors, setFieldValue }
         <div className={`box-content ${isComponentVisible ? "open" : ""}`}>
           {!noSearchBar && <Input type="text" className="form-control" value={searchInput || ""} onChange={(e) => setSearchInput(e.target.value)} />}
           <ul className="intl-tel-input">
-            {(props.inputprops?.setsearch ? listOpt : list)?.map((option, index) => (
+            {(props.inputprops?.setsearch ? listOpt : list)?.map((option, index) => {
+              // Calculate selection state once per item - with robust checks
+              let isSelected = false;
+              
+              if (Array.isArray(selectedItems) && selectedItems.length > 0 && Array.isArray(field?.value) && field?.value.length > 0) {
+                // Get option ID with fallbacks
+                const optionId = option?.[getValuesKey] || option?.id || option?._id;
+                
+                // Only check if option has a valid ID
+                if (optionId) {
+                  // For array fields: check if this option's ID exists in selectedItems
+                  isSelected = selectedItems.some(item => {
+                    const itemId = item?.[getValuesKey] || item?.id || item?._id;
+                    return itemId && String(itemId) === String(optionId);
+                  });
+                }
+              } else if (!Array.isArray(selectedItems) && selectedItems && option) {
+                // For single select: check if selectedItems matches this option
+                const selectedId = selectedItems?.[getValuesKey] || selectedItems?.id || selectedItems?._id;
+                const optionId = option?.[getValuesKey] || option?.id || option?._id;
+                isSelected = selectedId && optionId && String(selectedId) === String(optionId);
+              }
+              
+              return (
               <Fragment key={index}>
                 {option?.data ?
                   <li onClick={() => {
@@ -170,10 +212,10 @@ const ReactstrapSelectInput = ({ field, form: { touched, errors, setFieldValue }
                   : <li onClick={() => onSelectValue(option)}>
                     {option?.image && <Image src={option?.image} className="img-fluid category-image" alt={option?.name} height={50} width={50}
                     />}
-                    <p className={`cursor ${(Array.isArray(selectedItems) ? selectedItems.some(item => String(item[getValuesKey]) === String(option[getValuesKey])) : String(selectedItems?.[getValuesKey]) === String(option[getValuesKey])) ? 'selected' : ""}`}>{t(option.name)}</p>
+                    <p className={`cursor ${isSelected ? 'selected' : ''}`}>{t(option.name)}</p>
                   </li>}
               </Fragment>
-            ))}
+            )})}
           </ul>
           {
             props.inputprops?.setsearch ? listOpt?.length <= 0 && "No Data" : list?.length <= 0 && "No Data"

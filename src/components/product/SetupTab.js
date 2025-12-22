@@ -120,14 +120,14 @@ const SetupTab = ({ values, setFieldValue, errors, updateId }) => {
       refetchOnWindowFocus: false,
       select: (res) =>
         res?.data?.data
-          .filter((elem) => (updateId ? elem.id !== updateId : elem))
+          .filter((elem) => (updateId ? (elem.id || elem._id) !== updateId : elem))
           .map((elem) => {
             const primaryImage =
               elem.media?.find((m) => m.is_primary)?.url ||
               elem.media?.[0]?.url ||
               "/assets/images/placeholder.png";
             return {
-              id: elem.id,
+              id: elem.id || elem._id, // Support both id and _id
               name: elem.product_name,
               image: primaryImage,
               slug: elem.slug,
