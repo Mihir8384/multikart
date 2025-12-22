@@ -66,13 +66,29 @@ const ReactstrapSelectInput = ({ field, form: { touched, errors, setFieldValue }
   useEffect(() => {
     // Setting variables for type Array data
     if (Array.isArray(field?.value)) {
+      if (!field?.value || field?.value.length === 0) {
+        setSelectedItems([]);
+        return;
+      }
       const sourceList = props.inputprops?.setsearch ? listOpt : list;
-      const filteredItems = sourceList?.filter((elem) => field?.value?.includes(elem[getValuesKey])) || [];
+      if (!sourceList || sourceList.length === 0) {
+        return;
+      }
+      const filteredItems = sourceList.filter((elem) => 
+        field.value.some(val => String(val) === String(elem[getValuesKey]))
+      );
       setSelectedItems(filteredItems);
     } else {
       // Setting variables for type String data
+      if (!field?.value) {
+        setSelectedItems({});
+        return;
+      }
       const sourceList = props.inputprops?.setsearch ? listOpt : list;
-      const foundItem = sourceList?.find((elem) => String(field?.value) === String(elem[getValuesKey]));
+      if (!sourceList || sourceList.length === 0) {
+        return;
+      }
+      const foundItem = sourceList.find((elem) => String(field?.value) === String(elem[getValuesKey]));
       setSelectedItems(foundItem || {});
     }
   }, [field?.value, list, listOpt, getValuesKey])
@@ -82,10 +98,13 @@ const ReactstrapSelectInput = ({ field, form: { touched, errors, setFieldValue }
       setSelectedItems('')
       setFieldValue(field.name, '')
     } else {
-      let temp = field.value;
+      let temp = [...field.value];
       if (temp.length > 0) {
-        temp?.splice(temp.indexOf(id), 1)
-        setFieldValue(field.name, temp);
+        const index = temp.indexOf(id);
+        if (index !== -1) {
+          temp.splice(index, 1);
+          setFieldValue(field.name, temp);
+        }
       }
     }
   }
@@ -108,9 +127,11 @@ const ReactstrapSelectInput = ({ field, form: { touched, errors, setFieldValue }
                       <RiCloseLine
                         onClick={(e) => {
                           e.stopPropagation();
-                          RemoveSelectedItem(item[getValuesKey], item);
-                          setSelectedItems((p) => p.filter((elem) => elem[getValuesKey] !== item[getValuesKey]));
-                          setFieldValue(field.name, field?.value?.filter((elem) => elem[getValuesKey] !== item[getValuesKey]))
+                          const idToRemove = item[getValuesKey];
+                          // Update selectedItems (array of objects)
+                          setSelectedItems((p) => p.filter((elem) => String(elem[getValuesKey]) !== String(idToRemove)));
+                          // Update field.value (array of IDs)
+                          setFieldValue(field.name, field?.value?.filter((val) => String(val) !== String(idToRemove)));
                         }}
                       />
                     </a>
