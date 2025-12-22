@@ -9,7 +9,7 @@ const ReactstrapSelectInput = ({ field, form: { touched, errors, setFieldValue }
   
   const { t } = useTranslation("common");
   const [searchInput, setSearchInput] = useState();
-  const [selectedItems, setSelectedItems] = useState({});
+  const [selectedItems, setSelectedItems] = useState(Array.isArray(field?.value) ? [] : {});
   const [list, setList] = useState([]);
   const { ref, isComponentVisible, setIsComponentVisible } = useOutsideDropdown();
   let error = errors[field.name];
@@ -43,8 +43,8 @@ const ReactstrapSelectInput = ({ field, form: { touched, errors, setFieldValue }
   const onSelectValue = (option) => {
     
     if (Array.isArray(field?.value)) {
-      const temp = [...selectedItems];
-      const index = temp.findIndex((elem) => elem[getValuesKey] == option[getValuesKey])
+      const temp = Array.isArray(selectedItems) ? [...selectedItems] : [];
+      const index = temp.findIndex((elem) => String(elem[getValuesKey]) === String(option[getValuesKey]))
       if (index !== -1) {
         temp.splice(index, 1);
       } else {
@@ -52,7 +52,6 @@ const ReactstrapSelectInput = ({ field, form: { touched, errors, setFieldValue }
       }
       setSelectedItems(temp);
       setFieldValue(field?.name, temp.map((elem) => elem[getValuesKey]))
-      console.log("✅ Set array value:", temp.map((elem) => elem[getValuesKey]));
     } else {
       setIsComponentVisible(false);
       // Use getValuesKey instead of hardcoded 'id'
@@ -66,19 +65,17 @@ const ReactstrapSelectInput = ({ field, form: { touched, errors, setFieldValue }
   }
   useEffect(() => {
     // Setting variables for type Array data
-    if (props.inputprops?.setsearch) {
-      (Array.isArray(field?.value) && setSelectedItems) && setSelectedItems(listOpt?.filter((elem) => field?.value?.includes(elem[getValuesKey])))
+    if (Array.isArray(field?.value)) {
+      const sourceList = props.inputprops?.setsearch ? listOpt : list;
+      const filteredItems = sourceList?.filter((elem) => field?.value?.includes(elem[getValuesKey])) || [];
+      setSelectedItems(filteredItems);
     } else {
-      (Array.isArray(field?.value) && setSelectedItems) && setSelectedItems(list?.filter((elem) => field?.value?.includes(elem[getValuesKey])))
+      // Setting variables for type String data
+      const sourceList = props.inputprops?.setsearch ? listOpt : list;
+      const foundItem = sourceList?.find((elem) => String(field?.value) === String(elem[getValuesKey]));
+      setSelectedItems(foundItem || {});
     }
-    // Setting variables for type String data
-    if (props.inputprops?.setsearch) {
-      !Array.isArray(field?.value) && setSelectedItems && setSelectedItems(listOpt?.find((elem) => String(field?.value) === String(elem[getValuesKey])))
-    } else {
-      !Array.isArray(field?.value) && setSelectedItems && setSelectedItems(list?.find((elem) => String(field?.value) === String(elem[getValuesKey])))
-    }
-    
-  }, [field?.value, list, listOpt])
+  }, [field?.value, list, listOpt, getValuesKey])
 
   const RemoveSelectedItem = (id, item) => {
     if (props?.inputprops?.close) {
@@ -152,7 +149,7 @@ const ReactstrapSelectInput = ({ field, form: { touched, errors, setFieldValue }
                   : <li onClick={() => onSelectValue(option)}>
                     {option?.image && <Image src={option?.image} className="img-fluid category-image" alt={option?.name} height={50} width={50}
                     />}
-                    <p className={`cursor ${String(selectedItems?.[index]?.[getValuesKey] || selectedItems?.[getValuesKey]) === String(option[getValuesKey]) ? 'selected' : ""}`}>{t(option.name)}</p>
+                    <p className={`cursor ${(Array.isArray(selectedItems) ? selectedItems.some(item => String(item[getValuesKey]) === String(option[getValuesKey])) : String(selectedItems?.[getValuesKey]) === String(option[getValuesKey])) ? 'selected' : ""}`}>{t(option.name)}</p>
                   </li>}
               </Fragment>
             ))}

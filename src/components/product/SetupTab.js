@@ -48,7 +48,7 @@ const SetupTab = ({ values, setFieldValue, errors, updateId }) => {
     [Category],
     () =>
       request(
-        { url: Category, params: { status: 1, type: "product" } },
+        { url: Category, params: { status: 1, type: "product", limit: 1000 } },
         router
       ),
     {
@@ -69,7 +69,7 @@ const SetupTab = ({ values, setFieldValue, errors, updateId }) => {
     [tag],
     () =>
       request(
-        { url: tag, params: { status: 1, type: "product" } },
+        { url: tag, params: { status: 1, type: "product", limit: 1000 } },
         router
       ),
     {
