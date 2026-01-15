@@ -40,8 +40,8 @@ const TableTop = (props) => {
   const [tc, setTc] = useState(null);
 
   // For vendor routes, always allow bulk actions
-  const allowBulkDelete = destroy || url?.includes("/vendor/product") || url?.includes("/vendor/discount");
-  const allowBulkEdit = edit || url?.includes("/vendor/product") || url?.includes("/vendor/discount");
+  const allowBulkDelete = destroy || url?.includes("/vendor/product") || url?.includes("/vendor/discount") || url?.includes("/vendor/inventory");
+  const allowBulkEdit = edit || url?.includes("/vendor/product") || url?.includes("/vendor/discount") || url?.includes("/vendor/inventory");
 
   useEffect(() => {
     setInput(paginate);

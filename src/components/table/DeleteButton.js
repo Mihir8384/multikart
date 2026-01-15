@@ -27,6 +27,9 @@ const DeleteButton = ({ id, mutate, noImage }) => {
       } else if (currentPath.includes("/vendor/discounts")) {
         apiUrl = `/api/vendor/discount/${id}`;
         entityName = "Discount";
+      } else if (currentPath.includes("/vendor/inventory")) {
+        apiUrl = `/api/vendor/inventory/${id}`;
+        entityName = "Inventory";
       } else if (currentPath.includes("/product")) {
         apiUrl = `/api/product/${id}`;
         entityName = "Product";

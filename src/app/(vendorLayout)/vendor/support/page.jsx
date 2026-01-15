@@ -23,27 +23,32 @@ const supportApi = "/vendor/support/tickets";
 
 const SupportTable = ({ data, refetch, ...props }) => {
   const { t } = useTranslation("common");
+  
+  // Extract and process data
+  const processedData = (data?.data?.data || data?.data || []).map((item) => ({
+    ...item,
+    id: item._id, // Ensure id property exists
+    status_display: item.status,
+    status_color: item.status === "Open" ? "primary" : "success",
+  }));
+
   const headerObj = {
     checkBox: false,
+    isSerialNo: false,
     isOption: true,
+    noEdit: true,
     optionHead: { title: "Action", type: "view" },
     column: [
-      { title: "Ticket ID", apiKey: "ticket_id" },
-      { title: "Subject", apiKey: "subject" },
-      { title: "Category", apiKey: "category" },
-      { title: "Status", apiKey: "status", type: "badge" },
-      { title: "Date", apiKey: "createdAt", type: "date" },
+      { title: "Ticket ID", apiKey: "ticket_id", sorting: true },
+      { title: "Subject", apiKey: "subject", sorting: true },
+      { title: "Category", apiKey: "category", sorting: true },
+      { title: "Status", apiKey: "status_display", type: "badge" },
+      { title: "Date", apiKey: "createdAt", type: "date", sorting: true },
     ],
-    data: (data?.data?.data || []).map((item) => ({
-      ...item,
-      status: {
-        name: item.status,
-        color: item.status === "Open" ? "primary" : "success",
-      },
-    })),
+    data: processedData,
   };
 
-  return <ShowTable {...props} headerData={headerObj} url={supportApi} />;
+  return <ShowTable {...props} headerData={headerObj} refetch={refetch} />;
 };
 
 const SupportTableWrapped = TableWrapper(SupportTable);
@@ -51,6 +56,7 @@ const SupportTableWrapped = TableWrapper(SupportTable);
 const VendorSupport = () => {
   const { t } = useTranslation("common");
   const [modal, setModal] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const handleSubmit = async (values, { resetForm }) => {
     try {
@@ -63,6 +69,7 @@ const VendorSupport = () => {
         toast.success(t("Ticket raised successfully"));
         setModal(false);
         resetForm();
+        setRefreshTrigger((prev) => prev + 1); // Trigger table refresh
       }
     } catch (error) {
       toast.error(error.message);
@@ -87,6 +94,7 @@ const VendorSupport = () => {
             url={supportApi}
             moduleName="support"
             onlyTitle={true}
+            key={refreshTrigger}
           />
 
           <Modal isOpen={modal} toggle={() => setModal(false)} centered>

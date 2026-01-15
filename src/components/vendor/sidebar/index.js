@@ -98,12 +98,14 @@ const VendorSidebar = () => {
                 );
               } else {
                 return (
-                  <li key={item.path}>
+                  <li className="sidebar-list" key={item.path}>
                     <Link
                       href={item.path}
-                      className={pathname === item.path ? "active" : ""}
+                      className={`sidebar-link sidebar-title link-nav ${
+                        pathname === item.path ? "active" : ""
+                      }`}
                     >
-                      {item.icon}
+                      <div className="svg-icon">{item.icon}</div>
                       <span>{item.title}</span>
                     </Link>
                   </li>
@@ -115,12 +117,14 @@ const VendorSidebar = () => {
             <li className="sidebar-list">
               <hr className="mt-3 mb-2" />
             </li>
-            <li>
+            <li className="sidebar-list">
               <Link
                 href={accountLink.path}
-                className={pathname === accountLink.path ? "active" : ""}
+                className={`sidebar-link sidebar-title link-nav ${
+                  pathname === accountLink.path ? "active" : ""
+                }`}
               >
-                {accountLink.icon}
+                <div className="svg-icon">{accountLink.icon}</div>
                 <span>{accountLink.title}</span>
               </Link>
             </li>

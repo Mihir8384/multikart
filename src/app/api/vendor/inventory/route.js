@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Inventory from "@/models/Inventory";
+import Warehouse from "@/models/Warehouse";
+import Products from "@/models/Products";
 import { requireAuth } from "@/utils/auth/serverAuth";
 
 export async function GET(request) {
@@ -30,7 +32,7 @@ export async function GET(request) {
     }
 
     const inventoryData = await Inventory.find(query)
-      .populate("product", "product_name media sku")
+      .populate("product", "product_name media master_product_code")
       .populate("warehouse", "name")
       .sort({ updatedAt: -1 });
 
@@ -38,7 +40,7 @@ export async function GET(request) {
       _id: item._id,
       image: item.product?.media?.[0]?.url || null,
       name: item.product?.product_name || "N/A",
-      sku: item.product?.sku || "N/A",
+      sku: item.product?.master_product_code || "N/A",
       warehouse_name: item.warehouse?.name || "Main Warehouse",
       stock: item.stock,
       // Dynamic status badges for the UI
@@ -105,3 +107,88 @@ export async function POST(request) {
     );
   }
 }
+
+/**
+ * DELETE - Bulk delete inventory items
+ */
+export async function DELETE(request) {
+  try {
+    await dbConnect();
+    const auth = await requireAuth(request);
+    if (!auth.success) return auth.errorResponse;
+
+    const vendorId = auth.authData.userId;
+    const { ids } = await request.json();
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json(
+        { success: false, message: "Inventory IDs are required" },
+        { status: 400 }
+      );
+    }
+
+    // Delete inventory items that belong to this vendor
+    const result = await Inventory.deleteMany({
+      _id: { $in: ids },
+      vendor: vendorId,
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `${result.deletedCount} inventory item(s) deleted successfully`,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * PATCH - Bulk update stock of inventory items
+ */
+export async function PATCH(request) {
+  try {
+    await dbConnect();
+    const auth = await requireAuth(request);
+    if (!auth.success) return auth.errorResponse;
+
+    const vendorId = auth.authData.userId;
+    const { ids, stock } = await request.json();
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json(
+        { success: false, message: "Inventory IDs are required" },
+        { status: 400 }
+      );
+    }
+
+    if (typeof stock !== "number" || stock < 0) {
+      return NextResponse.json(
+        { success: false, message: "Stock must be a valid number" },
+        { status: 400 }
+      );
+    }
+
+    // Update inventory items that belong to this vendor
+    const result = await Inventory.updateMany(
+      {
+        _id: { $in: ids },
+        vendor: vendorId,
+      },
+      { $set: { stock } }
+    );
+
+    return NextResponse.json({
+      success: true,
+      message: `${result.modifiedCount} inventory item(s) updated successfully`,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
+  }
+}
+

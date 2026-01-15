@@ -146,7 +146,6 @@ const MENUITEMS = [
       {
         title: "Payout",
         displayTitle: "Payout",
-        icon: <RiWalletLine />,
         type: "sub",
         children: [
           {

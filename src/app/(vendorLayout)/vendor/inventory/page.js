@@ -13,6 +13,7 @@ import {
 } from "reactstrap";
 import { Formik, Form, Field } from "formik";
 import { useTranslation } from "react-i18next";
+import { useRouter } from "next/navigation";
 import { RiEdit2Line } from "react-icons/ri";
 import { FiPlus } from "react-icons/fi";
 
@@ -27,19 +28,11 @@ import Btn from "@/elements/buttons/Btn";
 const inventoryApi = "/vendor/inventory";
 const warehouseApi = "/warehouse";
 
-const InventoryTable = ({ data, refetch, isCheck, setIsCheck, ...props }) => {
+const InventoryTable = ({ data, refetch, isCheck, setIsCheck, setModal, setSelectedItem, ...props }) => {
   const { t } = useTranslation("common");
-  const [modal, setModal] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
 
-  // Fetch dropdown data
-  const { data: productData } = useCustomQuery(["vendorProducts"], () =>
-    request({ url: "/product" })
-  );
-  const { data: warehouseData } = useCustomQuery(["vendorWarehouses"], () =>
-    request({ url: warehouseApi })
-  );
+  if (!data) return <Loader />;
 
   // FIX: Flatten status AND ensure every item has an 'id' property for the table logic
   const processedData = (data?.data?.data || data?.data || []).map((item) => ({
@@ -49,17 +42,21 @@ const InventoryTable = ({ data, refetch, isCheck, setIsCheck, ...props }) => {
       typeof item.stock_status === "object"
         ? item.stock_status.name
         : item.stock_status,
+    status_color:
+      typeof item.stock_status === "object"
+        ? item.stock_status.color
+        : "secondary",
   }));
 
   const headerObj = {
     checkBox: true,
     isSerialNo: false,
     isOption: true,
-    noEdit: true,
+    noEdit: false,
     optionHead: {
       title: "Action",
       type: "edit",
-      url: "/vendor/inventory", // Dummy URL to satisfy internal component
+      url: "/vendor/inventory/edit",
     },
     column: [
       { title: "Image", apiKey: "image", type: "image", class: "sm-width" },
@@ -71,6 +68,41 @@ const InventoryTable = ({ data, refetch, isCheck, setIsCheck, ...props }) => {
     ],
     data: processedData,
   };
+
+  return (
+    <ShowTable
+      {...props}
+      headerData={headerObj}
+      editPermission={true}
+      destroyPermission={true}
+      refetch={refetch}
+      moduleName="inventory"
+      type="inventory"
+      url={inventoryApi}
+      link="inventory"
+      isCheck={isCheck}
+      setIsCheck={setIsCheck}
+    />
+  );
+};
+
+const InventoryTableWrapped = TableWrapper(InventoryTable);
+
+const VendorInventory = () => {
+  const { t } = useTranslation("common");
+  const [isCheck, setIsCheck] = useState([]);
+  const [modal, setModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Fetch dropdown data
+  const { data: productData } = useCustomQuery(["vendorProducts"], () =>
+    request({ url: "/product" })
+  );
+  const { data: warehouseData } = useCustomQuery(["vendorWarehouses"], () =>
+    request({ url: warehouseApi })
+  );
 
   const closeModal = () => {
     setModal(false);
@@ -86,9 +118,10 @@ const InventoryTable = ({ data, refetch, isCheck, setIsCheck, ...props }) => {
         data: values,
       });
       if (res.status === 200 || res.status === 201) {
-        refetch();
         closeModal();
         toast.success(t("Stock adjusted successfully"));
+        // Trigger table refresh
+        setRefreshTrigger(prev => prev + 1);
       }
     } catch (error) {
       toast.error(error.message);
@@ -97,163 +130,157 @@ const InventoryTable = ({ data, refetch, isCheck, setIsCheck, ...props }) => {
     }
   };
 
-  if (!data) return <Loader />;
-
-  return (
-    <>
-      <div className="title-header option-title mb-4">
-        <h5>{t("Inventory Management")}</h5>
-        <Btn
-          className="align-items-center btn-theme add-button"
-          onClick={() => setModal(true)}
-        >
-          <FiPlus /> {t("Adjust Stock")}
-        </Btn>
-      </div>
-
-      <ShowTable
-        {...props}
-        headerData={headerObj}
-        url={inventoryApi}
-        moduleName="inventory"
-        isCheck={isCheck} // Pass checkbox state down
-        setIsCheck={setIsCheck} // Pass checkbox setter down
-        customActions={(element) => (
-          <RiEdit2Line
-            className="text-info"
-            style={{ cursor: "pointer", fontSize: "18px" }}
-            onClick={() => {
-              setSelectedItem(element);
-              setModal(true);
-            }}
-          />
-        )}
-      />
-
-      <Modal isOpen={modal} toggle={closeModal} centered>
-        <ModalHeader toggle={closeModal}>
-          {selectedItem ? t("Edit Stock") : t("Adjust New Stock")}
-        </ModalHeader>
-        <ModalBody>
-          <Formik
-            enableReinitialize
-            initialValues={{
-              product_id:
-                selectedItem?.product?._id || selectedItem?.product_id || "",
-              warehouse_id:
-                selectedItem?.warehouse?._id ||
-                selectedItem?.warehouse_id ||
-                "",
-              stock: selectedItem?.stock || 0,
-              low_stock_threshold: selectedItem?.low_stock_threshold || 10,
-            }}
-            onSubmit={handleAdjustStock}
-          >
-            {({ values }) => (
-              <Form className="theme-form">
-                <FormGroup>
-                  <Label>{t("Product")}</Label>
-                  <Field
-                    as="select"
-                    name="product_id"
-                    className="form-control"
-                    disabled={!!selectedItem}
-                    required
-                  >
-                    <option value="">{t("Select Product")}</option>
-                    {Array.isArray(productData?.data?.data) &&
-                      productData.data.data.map((prod) => (
-                        <option key={prod._id} value={prod._id}>
-                          {prod.product_name}
-                        </option>
-                      ))}
-                  </Field>
-                </FormGroup>
-
-                <FormGroup>
-                  <Label>{t("Warehouse")}</Label>
-                  <Field
-                    as="select"
-                    name="warehouse_id"
-                    className="form-control"
-                    disabled={!!selectedItem}
-                    required
-                  >
-                    <option value="">{t("Select Warehouse")}</option>
-                    {Array.isArray(warehouseData?.data?.data)
-                      ? warehouseData.data.data.map((wh) => (
-                          <option key={wh._id} value={wh._id}>
-                            {wh.name}
-                          </option>
-                        ))
-                      : Array.isArray(warehouseData?.data)
-                      ? warehouseData.data.map((wh) => (
-                          <option key={wh._id} value={wh._id}>
-                            {wh.name}
-                          </option>
-                        ))
-                      : null}
-                  </Field>
-                </FormGroup>
-
-                <FormGroup>
-                  <Label>{t("Current Stock Quantity")}</Label>
-                  <Field
-                    name="stock"
-                    type="number"
-                    className="form-control"
-                    required
-                  />
-                </FormGroup>
-
-                <FormGroup>
-                  <Label>{t("Low Stock Alert Threshold")}</Label>
-                  <Field
-                    name="low_stock_threshold"
-                    type="number"
-                    className="form-control"
-                  />
-                </FormGroup>
-
-                <div className="text-end mt-4">
-                  <Button
-                    color="secondary"
-                    onClick={closeModal}
-                    className="me-2"
-                  >
-                    {t("Cancel")}
-                  </Button>
-                  <Btn
-                    type="submit"
-                    title={t("Save Changes")}
-                    loading={Number(isSubmitting)}
-                    className="btn-primary"
-                  />
-                </div>
-              </Form>
-            )}
-          </Formik>
-        </ModalBody>
-      </Modal>
-    </>
-  );
-};
-
-const InventoryTableWrapped = TableWrapper(InventoryTable);
-
-const VendorInventory = () => {
-  const [isCheck, setIsCheck] = useState([]); // Manage checkbox state at the top level
   return (
     <Col sm="12">
-      <Card>
+      <Card className="card-no-border">
         <CardBody>
+          <div className="title-header option-title d-flex align-items-center justify-content-between mb-4">
+            <h5 className="mb-0 fw-bold">{t("Inventory Management")}</h5>
+            <button
+              type="button"
+              className="btn btn-primary d-flex align-items-center gap-2"
+              onClick={() => {
+                setSelectedItem(null);
+                setModal(true);
+              }}
+            >
+              <FiPlus size={18} />
+              <span>{t("Adjust Stock")}</span>
+            </button>
+          </div>
+
           <InventoryTableWrapped
             url={inventoryApi}
             moduleName="inventory"
             onlyTitle={true}
             isCheck={isCheck}
             setIsCheck={setIsCheck}
+            setModal={setModal}
+            setSelectedItem={setSelectedItem}
+            key={refreshTrigger}
           />
+
+          {/* Add / Edit Stock Modal */}
+          <Modal isOpen={modal} toggle={closeModal} centered size="lg" className="theme-modal">
+            <ModalHeader toggle={closeModal} className="bg-light">
+              <h5 className="modal-title fw-bold mb-0">
+                {selectedItem ? t("Edit Stock") : t("Adjust New Stock")}
+              </h5>
+            </ModalHeader>
+            <ModalBody className="p-4">
+              <Formik
+                enableReinitialize
+                initialValues={{
+                  product_id:
+                    selectedItem?.product?._id || selectedItem?.product_id || "",
+                  warehouse_id:
+                    selectedItem?.warehouse?._id ||
+                    selectedItem?.warehouse_id ||
+                    "",
+                  stock: selectedItem?.stock || 0,
+                  low_stock_threshold: selectedItem?.low_stock_threshold || 10,
+                }}
+                onSubmit={handleAdjustStock}
+              >
+                {({ values }) => (
+                  <Form className="theme-form">
+                    <FormGroup className="mb-3">
+                      <Label className="fw-semibold">{t("Product")} <span className="text-danger">*</span></Label>
+                      <Field
+                        as="select"
+                        name="product_id"
+                        className="form-select"
+                        disabled={!!selectedItem}
+                        required
+                      >
+                        <option value="">{t("Select Product")}</option>
+                        {Array.isArray(productData?.data?.data) &&
+                          productData.data.data.map((prod) => (
+                            <option key={prod._id} value={prod._id}>
+                              {prod.product_name}
+                            </option>
+                          ))}
+                      </Field>
+                    </FormGroup>
+
+                    <FormGroup className="mb-3">
+                      <Label className="fw-semibold">{t("Warehouse")} <span className="text-danger">*</span></Label>
+                      <Field
+                        as="select"
+                        name="warehouse_id"
+                        className="form-select"
+                        disabled={!!selectedItem}
+                        required
+                      >
+                        <option value="">{t("Select Warehouse")}</option>
+                        {Array.isArray(warehouseData?.data?.data)
+                          ? warehouseData.data.data.map((wh) => (
+                              <option key={wh._id} value={wh._id}>
+                                {wh.name}
+                              </option>
+                            ))
+                          : Array.isArray(warehouseData?.data)
+                          ? warehouseData.data.map((wh) => (
+                              <option key={wh._id} value={wh._id}>
+                                {wh.name}
+                              </option>
+                            ))
+                          : null}
+                      </Field>
+                    </FormGroup>
+
+                    <FormGroup className="mb-3">
+                      <Label className="fw-semibold">{t("Current Stock Quantity")} <span className="text-danger">*</span></Label>
+                      <Field
+                        name="stock"
+                        type="number"
+                        className="form-control"
+                        placeholder="Enter stock quantity"
+                        min="0"
+                        required
+                      />
+                    </FormGroup>
+
+                    <FormGroup className="mb-3">
+                      <Label className="fw-semibold">{t("Low Stock Alert Threshold")}</Label>
+                      <Field
+                        name="low_stock_threshold"
+                        type="number"
+                        className="form-control"
+                        placeholder="Enter low stock threshold"
+                        min="0"
+                      />
+                    </FormGroup>
+
+                    <div className="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                      <Button
+                        type="button"
+                        color="light"
+                        onClick={closeModal}
+                        className="px-4"
+                      >
+                        {t("Cancel")}
+                      </Button>
+                      <button
+                        type="submit"
+                        className="btn btn-primary px-4"
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            {t("Saving...")}
+                          </>
+                        ) : (
+                          t("Save Changes")
+                        )}
+                      </button>
+                    </div>
+                  </Form>
+                )}
+              </Formik>
+            </ModalBody>
+          </Modal>
         </CardBody>
       </Card>
     </Col>
