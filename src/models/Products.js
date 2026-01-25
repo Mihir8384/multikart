@@ -50,6 +50,23 @@ const vendorOfferingSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    selected_variants: {
+      type: Map,
+      of: [{ type: String }],
+      default: new Map(),
+    },
+    warehouse_stock: [
+      {
+        warehouse_id: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Warehouse",
+        },
+        stock: {
+          type: Number,
+          default: 0,
+        },
+      },
+    ],
   },
   {
     timestamps: { createdAt: "created_at", updatedAt: "updated_at" },

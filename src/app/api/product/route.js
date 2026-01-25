@@ -3,6 +3,7 @@ import dbConnect from "@/lib/dbConnect";
 import Product from "@/models/Products";
 import Category from "@/models/Category";
 import Brand from "@/models/Brand";
+import Variant from "@/models/Variant";
 import mongoose from "mongoose";
 import { requireAdmin, requireAuth } from "@/utils/auth/serverAuth";
 import {
@@ -152,6 +153,10 @@ export async function GET(request) {
       const products = await Product.find(query)
         .populate("category_id", "name display_name path")
         .populate("brand_id", "name")
+        .populate({
+          path: "variant_values.variant_id",
+          select: "variant_name input_type options",
+        })
         .sort(sortOptions)
         .lean();
 
@@ -166,6 +171,10 @@ export async function GET(request) {
     const products = await Product.find(query)
       .populate("category_id", "name display_name path")
       .populate("brand_id", "name")
+      .populate({
+        path: "variant_values.variant_id",
+        select: "variant_name input_type options",
+      })
       .sort(sortOptions)
       .skip((queryPage - 1) * queryLimit)
       .limit(queryLimit)

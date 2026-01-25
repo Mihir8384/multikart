@@ -44,13 +44,21 @@ export async function GET(request) {
       });
     }
 
-    // Query products by created_by (user ObjectId) since store_id is Number and doesn't match Store._id
-    // This assumes vendors create their own products
+    // Query products by vendor offerings (new multi-vendor model)
+    // Count products where this vendor has a linked offering
     const [totalProducts, approvedProducts, pendingProducts] =
       await Promise.all([
-        Product.countDocuments({ created_by: userId }),
-        Product.countDocuments({ created_by: userId, is_approved: 1 }),
-        Product.countDocuments({ created_by: userId, is_approved: 0 }),
+        Product.countDocuments({ 
+          "linked_vendor_offerings.vendor_id": userId 
+        }),
+        Product.countDocuments({ 
+          "linked_vendor_offerings.vendor_id": userId, 
+          status: "active" 
+        }),
+        Product.countDocuments({ 
+          "linked_vendor_offerings.vendor_id": userId, 
+          status: "inactive" 
+        }),
       ]);
 
     // Orders data not available yet (Order model doesn't exist)

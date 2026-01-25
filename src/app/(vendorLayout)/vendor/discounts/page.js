@@ -130,8 +130,22 @@ const VendorDiscounts = () => {
     request({ url: "/category" })
   );
   const { data: productData } = useCustomQuery(["vendorProducts"], () =>
-    request({ url: "/product" })
+    request({ url: "/vendor/product" })
   );
+
+  // Extract products array from paginated structure
+  const products = React.useMemo(() => {
+    if (Array.isArray(productData?.data?.data?.data)) {
+      return productData.data.data.data;
+    }
+    if (Array.isArray(productData?.data?.data)) {
+      return productData.data.data;
+    }
+    if (Array.isArray(productData?.data)) {
+      return productData.data;
+    }
+    return [];
+  }, [productData]);
 
   const closeModal = () => {
     setModal(false);
@@ -294,12 +308,15 @@ const VendorDiscounts = () => {
                           required
                         >
                           <option value="">{t("Select Product")}</option>
-                          {Array.isArray(productData?.data?.data) &&
-                            productData.data.data.map((prod) => (
-                              <option key={prod._id} value={prod._id}>
-                                {prod.product_name}
+                          {products.length > 0 ? (
+                            products.map((prod) => (
+                              <option key={prod.id || prod._id} value={prod.id || prod._id}>
+                                {prod.name || prod.product_name}
                               </option>
-                            ))}
+                            ))
+                          ) : (
+                            <option disabled>No products available</option>
+                          )}
                         </Field>
                       </FormGroup>
                     )}

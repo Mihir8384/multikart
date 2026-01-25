@@ -11,6 +11,17 @@ import { FiPlus } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
 
 const VendorProductTable = ({ data, ...props }) => {
+  // Process data to add discount indicators
+  const processedData = (data?.data || []).map(product => ({
+    ...product,
+    // Format promo price with strike-through on base price if discount applies
+    promo_price: product.promo_price && product.promo_price > 0 
+      ? product.promo_price 
+      : null,
+    // Add visual indicator for discounted products
+    has_discount: product.has_discount || (product.promo_price && product.promo_price > 0),
+  }));
+
   const headerObj = {
     checkBox: true,
     isSerialNo: false,
@@ -30,10 +41,9 @@ const VendorProductTable = ({ data, ...props }) => {
       { title: "Floor Price", apiKey: "floor_price", type: "price" },
       { title: "Promo Price", apiKey: "promo_price", type: "price" },
       { title: "My Price", apiKey: "price", type: "price" },
-      { title: "My Stock", apiKey: "stock" },
       { title: "Status", apiKey: "status", type: "switch" },
     ],
-    data: data?.data || [],
+    data: processedData,
   };
 
   if (!data) return <Loader />;

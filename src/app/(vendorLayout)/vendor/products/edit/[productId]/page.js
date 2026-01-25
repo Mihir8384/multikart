@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useParams } from "next/navigation";
 import { Formik, Form } from "formik";
@@ -8,6 +8,7 @@ import request from "@/utils/axiosUtils";
 import Btn from "@/elements/buttons/Btn";
 import SimpleInputField from "@/components/inputFields/SimpleInputField";
 import SearchableSelectInput from "@/components/inputFields/SearchableSelectInput";
+import SmartVariantInput from "@/components/vendor/SmartVariantInput";
 
 export default function VendorProductEditPage() {
   const router = useRouter();
@@ -15,7 +16,6 @@ export default function VendorProductEditPage() {
   const productId = params.productId;
   const [product, setProduct] = useState(null);
   const [myOffer, setMyOffer] = useState(null);
-  const [warehouses, setWarehouses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -24,7 +24,7 @@ export default function VendorProductEditPage() {
       setLoading(true);
       setError(null);
       try {
-        // Fetch product details
+        // Fetch product details with populated variants
         const res = await request({
           url: `/vendor/product/${productId}`,
           method: "GET",
@@ -34,12 +34,24 @@ export default function VendorProductEditPage() {
           throw new Error(res.data?.message || "Failed to fetch product");
         }
 
-        setProduct(res.data?.product || null);
-        setMyOffer(res.data?.myOffer || null);
+        const fetchedProduct = res.data?.product || null;
+        
+        // If product has variants, fetch full variant details
+        if (fetchedProduct && fetchedProduct.variant_values && fetchedProduct.variant_values.length > 0) {
+          // Fetch full variant details from master product API
+          const masterProductRes = await request({
+            url: `/product/${productId}`,
+            method: "GET",
+          });
+          
+          if (masterProductRes.data?.success && masterProductRes.data?.data) {
+            // Replace variant_values with populated data from master product
+            fetchedProduct.variant_values = masterProductRes.data.data.variant_values || [];
+          }
+        }
 
-        // Fetch warehouses
-        const whRes = await request({ url: "/warehouse", method: "get" });
-        setWarehouses(whRes.data?.data || []);
+        setProduct(fetchedProduct);
+        setMyOffer(res.data?.myOffer || null);
       } catch (err) {
         setError(err.message || "Failed to load product details");
       } finally {
@@ -48,6 +60,26 @@ export default function VendorProductEditPage() {
     }
     fetchData();
   }, [productId]);
+
+  // Deduplicate and prepare variants
+  const hasVariants = product && Array.isArray(product.variant_values) && product.variant_values.length > 0;
+  
+  const uniqueVariants = useMemo(() => {
+    if (!product || !hasVariants) return [];
+    
+    const variantMap = new Map();
+    product.variant_values.forEach((variant) => {
+      const variantId = typeof variant.variant_id === 'object' 
+        ? variant.variant_id._id?.toString() 
+        : variant.variant_id?.toString();
+      
+      if (variantId && !variantMap.has(variantId)) {
+        variantMap.set(variantId, variant);
+      }
+    });
+    
+    return Array.from(variantMap.values());
+  }, [product, hasVariants]);
 
   if (loading)
     return (
@@ -77,12 +109,22 @@ export default function VendorProductEditPage() {
     price: Yup.number().required("Price is required").min(1),
     condition: Yup.string().required("Condition is required"),
     shipping_info: Yup.string().required("Shipping info is required"),
-    warehouse_stock: Yup.array().of(
-      Yup.object().shape({
-        warehouse_id: Yup.string().required(),
-        stock: Yup.number().min(0).required(),
-      })
-    ),
+    selected_variants: hasVariants
+      ? Yup.object().test(
+          "all-variants-selected",
+          "Please select at least one option for each variant",
+          function (value) {
+            if (!hasVariants) return true;
+            return uniqueVariants.every((variant) => {
+              const variantId = typeof variant.variant_id === 'object' 
+                ? variant.variant_id._id 
+                : variant.variant_id;
+              const selected = value?.[variantId];
+              return selected && (Array.isArray(selected) ? selected.length > 0 : selected);
+            });
+          }
+        )
+      : Yup.object(),
   });
 
   return (
@@ -101,9 +143,9 @@ export default function VendorProductEditPage() {
             base_price: myOffer.base_price || 0,
             floor_price: myOffer.floor_price || 0,
             price: myOffer.price || 0,
-            warehouse_stock: myOffer.warehouse_stock || [],
             condition: myOffer.condition || "new",
             shipping_info: myOffer.shipping_info || "",
+            selected_variants: myOffer.selected_variants || {},
           }}
           validationSchema={EditSchema}
           onSubmit={async (values, { setSubmitting }) => {
@@ -113,15 +155,16 @@ export default function VendorProductEditPage() {
                 method: "PATCH",
                 data: values,
               });
+              alert("Product updated successfully!");
               router.push("/vendor/products");
             } catch (e) {
-              alert("Failed to update product");
+              alert(e.response?.data?.message || "Failed to update product");
             } finally {
               setSubmitting(false);
             }
           }}
         >
-          {({ isSubmitting, values, setFieldValue }) => (
+          {({ isSubmitting, values, setFieldValue, touched, errors }) => (
             <Form className="theme-form">
               <div className="row g-3">
                 <div className="col-12">
@@ -160,66 +203,41 @@ export default function VendorProductEditPage() {
                     ]}
                   />
                 </div>
-                {warehouses.length > 0 && (
+
+                {/* Variant Selection */}
+                {hasVariants && uniqueVariants.length > 0 && (
                   <div className="col-12">
-                    <label className="form-label">Warehouses & Stock</label>
-                    {warehouses.map((wh) => (
-                      <div
-                        key={wh._id}
-                        className="d-flex align-items-center mb-2"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={values.warehouse_stock.some(
-                            (w) => w.warehouse_id === wh._id
-                          )}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setFieldValue("warehouse_stock", [
-                                ...values.warehouse_stock,
-                                { warehouse_id: wh._id, stock: 0 },
-                              ]);
-                            } else {
-                              setFieldValue(
-                                "warehouse_stock",
-                                values.warehouse_stock.filter(
-                                  (w) => w.warehouse_id !== wh._id
-                                )
-                              );
-                            }
-                          }}
-                          className="me-2"
-                        />
-                        <span className="me-2">{wh.name}</span>
-                        {values.warehouse_stock.some(
-                          (w) => w.warehouse_id === wh._id
-                        ) && (
-                          <input
-                            type="number"
-                            min="0"
-                            value={
-                              values.warehouse_stock.find(
-                                (w) => w.warehouse_id === wh._id
-                              )?.stock || 0
-                            }
-                            onChange={(e) => {
-                              setFieldValue(
-                                "warehouse_stock",
-                                values.warehouse_stock.map((w) =>
-                                  w.warehouse_id === wh._id
-                                    ? { ...w, stock: Number(e.target.value) }
-                                    : w
-                                )
-                              );
+                    <div className="alert alert-info">
+                      <strong>Product Variants:</strong> Select the variant options you want to offer for this product.
+                    </div>
+                    {uniqueVariants.map((variant) => {
+                      const variantId = typeof variant.variant_id === 'object' 
+                        ? variant.variant_id._id 
+                        : variant.variant_id;
+                      
+                      const selectedValues = values.selected_variants?.[variantId] || [];
+                      
+                      return (
+                        <div key={variantId} className="mb-3">
+                          <SmartVariantInput
+                            variant={variant}
+                            variantId={variantId}
+                            selectedValues={selectedValues}
+                            onChange={(newValues) => {
+                              setFieldValue(`selected_variants.${variantId}`, newValues);
                             }}
-                            placeholder="Stock"
-                            style={{ width: 80 }}
                           />
-                        )}
-                      </div>
-                    ))}
+                          {touched.selected_variants && errors.selected_variants && (
+                            <div className="text-danger small mt-1">
+                              {errors.selected_variants}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
+
                 <div className="col-12">
                   <SearchableSelectInput
                     nameList={[

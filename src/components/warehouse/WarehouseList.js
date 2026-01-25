@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Row, Col, Card, CardBody } from "reactstrap";
 import { useTranslation } from "react-i18next";
 import Btn from "@/elements/buttons/Btn";
@@ -8,17 +8,32 @@ import request from "@/utils/axiosUtils";
 import Loader from "../commonComponent/Loader";
 import { ToastNotification } from "@/utils/customFunctions/ToastNotification";
 
-const WarehouseList = () => {
+const WarehouseList = ({ isVendor = false }) => {
   const { t } = useTranslation("common");
   const router = useRouter();
+  const pathname = usePathname();
   const [loading, setLoading] = useState(true);
   const [warehouses, setWarehouses] = useState([]);
+  
+  // Use prop if provided, otherwise detect from pathname
+  const isVendorLayout = React.useMemo(() => {
+    // First priority: explicit prop
+    if (isVendor) return true;
+    // Second: Check pathname from Next.js
+    if (pathname?.includes('/vendor/')) return true;
+    // Third: Fallback to window location for client-side
+    if (typeof window !== 'undefined' && window.location.pathname.includes('/vendor/')) return true;
+    return false;
+  }, [isVendor, pathname]);
+  
+  // Determine API endpoint based on layout
+  const apiEndpoint = isVendorLayout ? "vendor/warehouse" : "warehouse";
 
-  // Fetch data from the API created in Step 2
+  // Fetch data from the API
   const fetchWarehouses = async () => {
     try {
       setLoading(true);
-      const response = await request({ url: "warehouse" }, router);
+      const response = await request({ url: apiEndpoint }, router);
       if (response?.data?.success) {
         setWarehouses(response.data.data);
       }
@@ -31,7 +46,7 @@ const WarehouseList = () => {
 
   useEffect(() => {
     fetchWarehouses();
-  }, []);
+  }, [apiEndpoint]);
 
   // Requirement: Single Remove functionality [cite: 1805]
   const handleDelete = async (id) => {
@@ -43,7 +58,7 @@ const WarehouseList = () => {
       try {
         const response = await request(
           {
-            url: `warehouse/${id}`,
+            url: `${apiEndpoint}/${id}`,
             method: "DELETE",
           },
           router
@@ -70,7 +85,7 @@ const WarehouseList = () => {
             <li>
               <Btn
                 className="btn-primary"
-                onClick={() => router.push("/warehouse/create")}
+                onClick={() => router.push(isVendorLayout ? "/vendor/warehouses/create" : "/warehouse/create")}
               >
                 <i className="ri-add-line"></i> {t("Add new address")}
               </Btn>
@@ -113,7 +128,7 @@ const WarehouseList = () => {
                       className="text-primary"
                       onClick={(e) => {
                         e.preventDefault();
-                        router.push(`/warehouse/edit/${center._id}`);
+                        router.push(isVendorLayout ? `/vendor/warehouses/edit/${center._id}` : `/warehouse/edit/${center._id}`);
                       }}
                     >
                       {t("Edit")}

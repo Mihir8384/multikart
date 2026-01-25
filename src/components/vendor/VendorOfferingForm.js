@@ -12,6 +12,7 @@ import { ToastNotification } from "@/utils/customFunctions/ToastNotification";
 import SimpleInputField from "@/components/inputFields/SimpleInputField";
 import SearchableSelectInput from "@/components/inputFields/SearchableSelectInput";
 import InputField from "@/components/inputFields/InputField";
+import SmartVariantInput from "./SmartVariantInput";
 
 import { warehouse as WarehouseAPI } from "@/utils/axiosUtils/API";
 
@@ -19,31 +20,17 @@ const VendorOfferingForm = ({ product, isOpen, toggle }) => {
   const { t } = useTranslation("common");
   const router = useRouter();
 
-  // 1. Validation Schema (Defined here or outside component)
-  const OfferingSchema = Yup.object().shape({
-    vendor_sku: Yup.string().required("Vendor SKU is required"),
-    base_price: Yup.number().required("Base Price is required").min(0),
-    floor_price: Yup.number().required("Floor Price is required").min(0),
-    price: Yup.number().required("Price is required").min(1),
-    condition: Yup.string().required("Condition is required"),
-    shipping_info: Yup.string().required("Shipping info is required"),
-    warehouse_stock: Yup.array().of(
-      Yup.object().shape({
-        warehouse_id: Yup.string().required(),
-        stock: Yup.number().min(0).required(),
-      })
-    ),
-    // Optionally add variant validation here
-  });
-
   // 2. Fetch vendor warehouses
   const [warehouses, setWarehouses] = useState([]);
+  
   useEffect(() => {
     async function fetchWarehouses() {
       try {
-        const res = await request({ url: "/warehouse", method: "get" });
+        // FIX: Use vendor warehouse API endpoint
+        const res = await request({ url: "vendor/warehouse", method: "get" }, router);
         setWarehouses(res.data?.data || []);
       } catch (e) {
+        console.error("Error fetching vendor warehouses:", e);
         setWarehouses([]);
       }
     }
@@ -67,12 +54,62 @@ const VendorOfferingForm = ({ product, isOpen, toggle }) => {
     },
   });
 
-  // 3. NOW we can safely return null if no product is selected
+  // 3. Prepare variant info if available (BEFORE any return statements)
+  const hasVariants =
+    product && Array.isArray(product.variant_values) && product.variant_values.length > 0;
+
+  // 4. Group and deduplicate variants by variant_id (HOOK - Must be unconditional)
+  const uniqueVariants = React.useMemo(() => {
+    if (!product || !hasVariants) return [];
+    
+    const variantMap = new Map();
+    product.variant_values.forEach((variant) => {
+      const variantId = typeof variant.variant_id === 'object' 
+        ? variant.variant_id._id?.toString() 
+        : variant.variant_id?.toString();
+      
+      if (variantId && !variantMap.has(variantId)) {
+        variantMap.set(variantId, variant);
+      }
+    });
+    
+    return Array.from(variantMap.values());
+  }, [product, hasVariants]);
+
+  // 5. NOW we can safely return null if no product is selected
   if (!product) return null;
 
-  // 4. Prepare variant info if available
-  const hasVariants =
-    Array.isArray(product.variant_values) && product.variant_values.length > 0;
+  // 5. Dynamic validation schema based on product
+  const OfferingSchemaWithVariants = Yup.object().shape({
+    vendor_sku: Yup.string().required("Vendor SKU is required"),
+    base_price: Yup.number().required("Base Price is required").min(0),
+    floor_price: Yup.number().required("Floor Price is required").min(0),
+    price: Yup.number().required("Price is required").min(1),
+    condition: Yup.string().required("Condition is required"),
+    shipping_info: Yup.string().required("Shipping info is required"),
+    warehouse_stock: Yup.array().of(
+      Yup.object().shape({
+        warehouse_id: Yup.string().required(),
+        stock: Yup.number().min(0).required(),
+      })
+    ),
+    selected_variants: hasVariants
+      ? Yup.object().test(
+          "all-variants-selected",
+          "Please select at least one option for each variant",
+          function (value) {
+            if (!hasVariants) return true;
+            return uniqueVariants.every((variant) => {
+              const variantId = typeof variant.variant_id === 'object' 
+                ? variant.variant_id._id 
+                : variant.variant_id;
+              const selected = value[variantId];
+              return selected && (Array.isArray(selected) ? selected.length > 0 : selected);
+            });
+          }
+        )
+      : Yup.object(),
+  });
 
   return (
     <Modal isOpen={isOpen} toggle={toggle} size="lg" centered>
@@ -101,9 +138,18 @@ const VendorOfferingForm = ({ product, isOpen, toggle }) => {
             condition: "new",
             shipping_info: "",
             status: "active",
-            // Optionally: variants: []
+            selected_variants: hasVariants
+              ? uniqueVariants.reduce((acc, variant) => {
+                  // Handle both populated and unpopulated variant_id
+                  const variantId = typeof variant.variant_id === 'object' 
+                    ? variant.variant_id._id 
+                    : variant.variant_id;
+                  acc[variantId] = []; // Array for multi-select
+                  return acc;
+                }, {})
+              : {},
           }}
-          validationSchema={OfferingSchema}
+          validationSchema={OfferingSchemaWithVariants}
           onSubmit={(values) => {
             const formData = new FormData();
             const payload = {
@@ -115,13 +161,18 @@ const VendorOfferingForm = ({ product, isOpen, toggle }) => {
               warehouse_stock: values.warehouse_stock,
               condition: values.condition,
               shipping_info: values.shipping_info,
-              // Optionally: variants: values.variants
+              selected_variants: hasVariants ? values.selected_variants : {},
             };
             formData.append("data", JSON.stringify(payload));
             submitMutation.mutate(formData);
           }}
         >
-          {({ isSubmitting, values, setFieldValue }) => (
+          {({ isSubmitting, values, setFieldValue, touched, errors }) => {
+            // Debug logging
+            console.log("🔍 Form Errors:", errors);
+            console.log("👆 Form Touched:", touched);
+            
+            return (
             <Form className="theme-form">
               <SimpleInputField
                 nameList={[
@@ -243,19 +294,45 @@ const VendorOfferingForm = ({ product, isOpen, toggle }) => {
                 ]}
               />
 
-              {/* Variants section */}
-              {hasVariants && (
-                <div className="mb-3">
-                  <label className="form-label">Variants</label>
-                  <div className="border rounded p-2">
-                    {product.variant_values.map((variant, idx) => (
-                      <div key={variant.variant_id} className="mb-2">
-                        <strong>{variant.options.join(", ")}</strong>
-                        {/* You can add price/stock fields for each variant here */}
-                        {/* Example: */}
-                        {/* <input type="number" placeholder="Price" /> <input type="number" placeholder="Stock" /> */}
-                      </div>
-                    ))}
+              {/* Smart Variants Section - Adapts to Variant Type */}
+              {hasVariants && uniqueVariants.length > 0 && (
+                <div className="mb-4">
+                  <h5 className="mb-3">Product Variants</h5>
+                  <p className="text-muted small mb-3">
+                    Select variant options for this product. Input type adapts based on variant type 
+                    (color picker for colors, image selection for patterns, etc.)
+                  </p>
+                  
+                  <div className="border rounded p-3 bg-light">
+                    {uniqueVariants.map((variant) => {
+                      const variantId = typeof variant.variant_id === 'object' 
+                        ? variant.variant_id._id 
+                        : variant.variant_id;
+                      const selectedValues = values.selected_variants[variantId] || [];
+                      
+                      return (
+                        <div key={variantId} className="mb-4">
+                          <SmartVariantInput
+                            variant={variant}
+                            variantId={variantId}
+                            selectedValues={selectedValues}
+                            onChange={(newValues) => {
+                              setFieldValue(`selected_variants.${variantId}`, newValues);
+                            }}
+                          />
+                          
+                          {/* Validation Error Display */}
+                          {touched.selected_variants?.[variantId] && 
+                           errors.selected_variants && (
+                            <div className="text-danger small mt-2">
+                              {typeof errors.selected_variants === 'string' 
+                                ? errors.selected_variants 
+                                : 'Please select at least one option'}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -268,12 +345,14 @@ const VendorOfferingForm = ({ product, isOpen, toggle }) => {
                   className="btn-primary"
                   type="submit"
                   loading={isSubmitting || submitMutation.isLoading}
+                  disabled={Object.keys(errors).length > 0}
                 >
                   {t("List Product")}
                 </Btn>
               </div>
             </Form>
-          )}
+            );
+          }}
         </Formik>
       </ModalBody>
     </Modal>

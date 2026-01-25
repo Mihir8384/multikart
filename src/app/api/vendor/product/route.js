@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Product from "@/models/Products";
 import Category from "@/models/Category";
+import Discount from "@/models/Discount";
 import mongoose from "mongoose";
 import { requireAuth } from "@/utils/auth/serverAuth";
 import { uploadToCloudinary } from "@/utils/cloudinary/cloudinaryService";
+import { applyDiscountsToProducts } from "@/utils/discountCalculator";
 
 /**
  * GET /api/vendor/product
@@ -32,22 +34,31 @@ export async function GET(request) {
       )
       .lean();
 
-    // 3. Transform data
+    // 3. Get active discounts for this vendor
+    const discounts = await Discount.find({
+      vendor: vendorId,
+      status: true,
+      start_date: { $lte: new Date() },
+      end_date: { $gte: new Date() },
+    }).lean();
+
+    // 4. Transform data
     const vendorProducts = products.map((p) => {
       const myOffer = p.linked_vendor_offerings.find(
         (offer) => offer.vendor_id.toString() === vendorId.toString()
       );
-      console.log("DEBUG myOffer for product", p._id, myOffer);
+      
       return {
         id: p._id,
+        _id: p._id,
         name: p.product_name,
         slug: p.slug,
         image: p.product_thumbnail,
         category: p.category_id?.name || "N/A",
+        category_id: p.category_id,
         sku: myOffer?.vendor_sku || p.sku || "N/A",
         base_price: myOffer?.base_price ?? 0,
         floor_price: myOffer?.floor_price ?? 0,
-        promo_price: p.promo_price || 0,
         price: myOffer?.price || 0,
         stock: myOffer?.stock_quantity || 0,
         status: myOffer?.is_active ? 1 : 0,
@@ -55,14 +66,17 @@ export async function GET(request) {
       };
     });
 
+    // 5. Apply discounts to calculate promotional prices
+    const productsWithDiscounts = applyDiscountsToProducts(vendorProducts, discounts);
+
     // --- FIX: Return data in Pagination format for the Table ---
     return NextResponse.json({
       success: true,
       data: {
-        data: vendorProducts,
-        total: vendorProducts.length,
+        data: productsWithDiscounts,
+        total: productsWithDiscounts.length,
         current_page: 1,
-        per_page: vendorProducts.length > 0 ? vendorProducts.length : 10,
+        per_page: productsWithDiscounts.length > 0 ? productsWithDiscounts.length : 10,
         last_page: 1,
       },
     });
@@ -118,6 +132,17 @@ export async function POST(request) {
         stock_quantity = Number(productData.stock_quantity) || 0;
       }
 
+      // Find master product first
+      const masterProduct = await Product.findById(productData.master_product_id);
+
+      if (!masterProduct) {
+        return NextResponse.json(
+          { success: false, message: "Master Product not found." },
+          { status: 404 }
+        );
+      }
+
+      // Create vendor offering subdocument
       const vendorOffering = {
         vendor_product_id: new mongoose.Types.ObjectId(),
         vendor_id: authCheck.authData.userId,
@@ -130,23 +155,12 @@ export async function POST(request) {
         condition: productData.condition || "new",
         shipping_info: productData.shipping_info,
         is_active: true,
+        selected_variants: productData.selected_variants || {},
       };
 
-      // Find master product and push the new offering
-      const updatedProduct = await Product.findByIdAndUpdate(
-        productData.master_product_id,
-        {
-          $push: { linked_vendor_offerings: vendorOffering },
-        },
-        { new: true }
-      );
-
-      if (!updatedProduct) {
-        return NextResponse.json(
-          { success: false, message: "Master Product not found." },
-          { status: 404 }
-        );
-      }
+      // Push to array and save (lets Mongoose handle subdocument creation)
+      masterProduct.linked_vendor_offerings.push(vendorOffering);
+      const updatedProduct = await masterProduct.save();
 
       return NextResponse.json(
         {

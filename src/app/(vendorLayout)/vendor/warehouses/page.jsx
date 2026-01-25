@@ -1,8 +1,7 @@
-export default function VendorDashboardPage() {
-  return (
-    <div className="container-fluid">
-      <h2>Vendor Dashboard</h2>
-      <p>Coming soon...</p>
-    </div>
-  );
-}
+import WarehouseList from "@/components/warehouse/WarehouseList";
+
+const VendorWarehousePage = () => {
+  return <WarehouseList isVendor={true} />;
+};
+
+export default VendorWarehousePage;

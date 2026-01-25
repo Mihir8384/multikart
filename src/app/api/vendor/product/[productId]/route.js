@@ -106,6 +106,9 @@ export async function PATCH(request, { params }) {
     if (data.warehouse_stock !== undefined)
       updateFields["linked_vendor_offerings.$.warehouse_stock"] =
         data.warehouse_stock;
+    if (data.selected_variants !== undefined)
+      updateFields["linked_vendor_offerings.$.selected_variants"] =
+        data.selected_variants;
 
     // Update product
     const updated = await Product.findOneAndUpdate(

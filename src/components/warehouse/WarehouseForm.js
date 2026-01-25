@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Form, Formik } from "formik";
 import { Row, Col, Card, CardBody } from "reactstrap";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import * as Yup from "yup";
 import SimpleInputField from "../inputFields/SimpleInputField";
@@ -13,9 +13,10 @@ import Loader from "../commonComponent/Loader";
 import { ToastNotification } from "@/utils/customFunctions/ToastNotification";
 import { YupObject } from "@/utils/validation/ValidationSchemas";
 
-const WarehouseForm = ({ updateId }) => {
+const WarehouseForm = ({ updateId, isVendor = false }) => {
   const { t } = useTranslation("common");
   const router = useRouter();
+  const pathname = usePathname();
   const [loading, setLoading] = useState(false);
   const [initialValues, setInitialValues] = useState({
     name: "",
@@ -27,20 +28,35 @@ const WarehouseForm = ({ updateId }) => {
     contact_no: "",
     country: "Maldives",
   });
+  
+  // Use prop if provided, otherwise detect from pathname
+  const isVendorLayout = React.useMemo(() => {
+    if (isVendor) return true;
+    if (pathname?.includes('/vendor/')) return true;
+    if (typeof window !== 'undefined' && window.location.pathname.includes('/vendor/')) return true;
+    return false;
+  }, [isVendor, pathname]);
+  
+  // Determine API endpoint and navigation paths
+  const apiEndpoint = isVendorLayout ? "vendor/warehouse" : "warehouse";
+  const listPath = isVendorLayout ? "/vendor/warehouses" : "/warehouse";
 
   // Fetch existing data if in Edit Mode
   useEffect(() => {
     if (updateId) {
       setLoading(true);
-      request({ url: `warehouse/${updateId}` }, router)
+      request({ url: `${apiEndpoint}/${updateId}` }, router)
         .then((res) => {
           if (res?.data?.success) {
             setInitialValues(res.data.data);
           }
         })
+        .catch((err) => {
+          console.error("Error loading warehouse:", err);
+        })
         .finally(() => setLoading(false));
     }
-  }, [updateId, router]);
+  }, [updateId, router, apiEndpoint]);
 
   // Validation Schema
   const validationSchema = YupObject({
@@ -53,7 +69,7 @@ const WarehouseForm = ({ updateId }) => {
 
   const onSubmit = async (values) => {
     try {
-      const url = updateId ? `warehouse/${updateId}` : "warehouse";
+      const url = updateId ? `${apiEndpoint}/${updateId}` : apiEndpoint;
       const method = updateId ? "PUT" : "POST";
       const response = await request({ url, method, data: values }, router);
 
@@ -62,7 +78,7 @@ const WarehouseForm = ({ updateId }) => {
           "success",
           updateId ? t("Updated successfully") : t("Created successfully")
         );
-        router.push("/warehouse");
+        router.push(listPath);
       }
     } catch (error) {
       ToastNotification("error", t("Failed to save fulfillment center"));

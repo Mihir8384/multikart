@@ -132,3 +132,33 @@ export async function requireAuth(request) {
   // Pass along the authData (which includes userId, email, isAdmin)
   return { success: true, authData: authData };
 }
+
+/**
+ * Middleware function to require vendor access for API routes
+ * @param {Request} request - The Next.js request object
+ * @returns {Promise<{success: boolean, authData?: Object, errorResponse?: Response}>}
+ */
+export async function requireVendor(request) {
+  const authData = await extractAuthFromRequest(request);
+
+  // Fail if no userId is found
+  if (!authData.userId) {
+    const errorResponse = new Response(
+      JSON.stringify({
+        success: false,
+        message: "Authentication required. Please log in.",
+        data: null,
+      }),
+      {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+
+    return { success: false, errorResponse };
+  }
+
+  // Vendors should not be admins (optional: can be removed if vendors can also be admins)
+  // For now, we just ensure they are authenticated
+  return { success: true, authData: authData };
+}

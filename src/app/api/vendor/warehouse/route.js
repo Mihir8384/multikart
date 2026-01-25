@@ -1,19 +1,22 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Warehouse from "@/models/Warehouse";
-import { requireAdmin } from "@/utils/auth/serverAuth";
+import { requireVendor } from "@/utils/auth/serverAuth";
 
 /**
- * GET /api/warehouse - Admin: Fetch ALL fulfillment centers
+ * GET /api/vendor/warehouse - Vendor: Fetch their own fulfillment centers
  */
 export async function GET(request) {
   try {
     await dbConnect();
-    const authCheck = await requireAdmin(request);
+    const authCheck = await requireVendor(request);
     if (!authCheck.success) return authCheck.errorResponse;
 
+    const { userId } = authCheck.authData;
+
     const centers = await Warehouse.find({ 
-      is_fulfillment_center: true 
+      is_fulfillment_center: true,
+      created_by: userId 
     }).sort({ created_at: -1 });
 
     return NextResponse.json({
@@ -29,12 +32,12 @@ export async function GET(request) {
 }
 
 /**
- * POST /api/warehouse - Admin: Create a new fulfillment center
+ * POST /api/vendor/warehouse - Vendor: Create a new fulfillment center
  */
 export async function POST(request) {
   try {
     await dbConnect();
-    const authCheck = await requireAdmin(request);
+    const authCheck = await requireVendor(request);
     if (!authCheck.success) return authCheck.errorResponse;
 
     const body = await request.json();
@@ -64,21 +67,32 @@ export async function POST(request) {
 }
 
 /**
- * DELETE /api/warehouse - Admin: Bulk delete fulfillment centers
+ * DELETE /api/vendor/warehouse - Vendor: Bulk delete (only their own)
  */
 export async function DELETE(request) {
   try {
     await dbConnect();
-    const authCheck = await requireAdmin(request);
+    const authCheck = await requireVendor(request);
     if (!authCheck.success) return authCheck.errorResponse;
 
+    const { userId } = authCheck.authData;
     const { ids } = await request.json();
 
-    await Warehouse.deleteMany({ _id: { $in: ids } });
+    const result = await Warehouse.deleteMany({ 
+      _id: { $in: ids },
+      created_by: userId 
+    });
+
+    if (result.deletedCount === 0) {
+      return NextResponse.json(
+        { success: false, message: "No warehouses found or unauthorized" },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      message: "Deleted successfully",
+      message: `Deleted ${result.deletedCount} warehouse(s) successfully`,
     });
   } catch (error) {
     return NextResponse.json(

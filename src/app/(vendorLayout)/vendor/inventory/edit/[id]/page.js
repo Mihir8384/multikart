@@ -50,7 +50,7 @@ const InventoryEditPage = () => {
         // Fetch products and warehouses for dropdowns
         const [productRes, warehouseRes] = await Promise.all([
           request({ url: "/product", method: "GET" }),
-          request({ url: "/warehouse", method: "GET" }),
+          request({ url: "vendor/warehouse", method: "GET" }), // FIX: Use vendor warehouse API
         ]);
 
         setProductData(productRes.data?.data || []);
