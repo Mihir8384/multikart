@@ -195,27 +195,31 @@ const ProductForm = ({
                     updateId={updateId}
                     setActiveTab={setActiveTab}
                   />
-                  <div className="ms-auto justify-content-end dflex-wgap mt-sm-4 mt-2 save-back-button">
-                    <Btn
-                      className="btn-outline"
-                      title="Back"
-                      onClick={() => router.back()}
-                    />
-                    {updateId && (
+
+                  {/* Form Actions - Full width after sidebar */}
+                  <Col xl={{ size: 7, offset: 3 }} lg={{ size: 8, offset: 4 }} className="mt-4">
+                    <div className="save-back-button">
                       <Btn
                         className="btn-outline"
-                        type="submit"
-                        title="save&Continue"
-                        onClick={() => setSaveButton(true)}
+                        title="Back"
+                        onClick={() => router.back()}
                       />
-                    )}
-                    <Btn
-                      className="btn-primary"
-                      type="submit"
-                      title={buttonName}
-                      disabled={isSubmitting}
-                    />
-                  </div>
+                      {updateId && (
+                        <Btn
+                          className="btn-outline"
+                          type="submit"
+                          title="save&Continue"
+                          onClick={() => setSaveButton(true)}
+                        />
+                      )}
+                      <Btn
+                        className="btn-primary"
+                        type="submit"
+                        title={buttonName}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                  </Col>
                 </Row>
               </Card>
             </Col>

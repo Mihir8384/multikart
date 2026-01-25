@@ -61,9 +61,9 @@ const Footer = () => {
   return (
     <Container fluid={true}>
       <footer className="footer">
-        <Row>
+        <Row className="align-items-center">
           <Col md="12" className="footer-copyright text-center">
-            <p className="mb-0">
+            <p className="mb-0 d-inline-block">
               {t(state?.setCopyRight ? state?.setCopyRight : "© Pixelstrap")}
             </p>
             {(!accountData?.store ||
@@ -71,7 +71,8 @@ const Footer = () => {
               !isAdmin && (
                 <Button
                   color="primary"
-                  className="mt-2"
+                  size="sm"
+                  className="ms-3 footer-vendor-btn"
                   onClick={handleBecomeVendor}
                 >
                   {t("Become a Vendor")}

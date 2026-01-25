@@ -2,13 +2,13 @@
      Footer CSS Start - Modern Elegant Design
 ==========================**/
 
-// Modern Footer with Glassmorphism
+// Modern Footer with Glassmorphism - Compact Design
 .footer {
     background: linear-gradient(135deg, rgba(248, 250, 252, 0.95) 0%, rgba(241, 245, 249, 0.95) 100%);
     backdrop-filter: blur(10px);
     border-top: 1px solid rgba(14, 165, 233, 0.15);
-    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.08);
-    padding: 20px 15px;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+    padding: 10px 15px;
     position: fixed;
     bottom: 0;
     right: 0;
@@ -27,13 +27,15 @@
 
     p {
         color: #475569;
+        font-size: 13px;
+        margin-bottom: 0;
     }
 
     &.footer-dark,
     body.dark-only & {
         background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(17, 24, 39, 0.95) 100%);
         border-top-color: rgba(14, 165, 233, 0.1);
-        box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
 
         p {
             color: $white;
@@ -41,12 +43,12 @@
     }
 }
 
-// Footer Text Styling
+// Footer Text Styling - Compact
 .footer-text {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     color: #64748b;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.2px;
     transition: color 0.3s ease;
 
     &:hover {
@@ -63,34 +65,34 @@
     }
 }
 
-// Footer Vendor Button Styling
+// Footer Vendor Button Styling - Compact
 .footer-vendor-btn {
     background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
     border: none;
-    border-radius: 6px;
+    border-radius: 5px;
     font-weight: 600;
-    font-size: 13px;
-    padding: 8px 16px !important;
+    font-size: 12px;
+    padding: 6px 12px !important;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+    box-shadow: 0 2px 8px rgba(14, 165, 233, 0.25);
 
     &:hover {
         background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-        box-shadow: 0 8px 20px rgba(14, 165, 233, 0.4);
-        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.35);
+        transform: translateY(-1px);
     }
 
     &:focus {
-        box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25), 0 8px 20px rgba(14, 165, 233, 0.4);
+        box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2), 0 4px 12px rgba(14, 165, 233, 0.35);
         outline: none;
     }
 
     // Dark mode - keep same style
     body.dark-only & {
-        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
+        box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
 
         &:hover {
-            box-shadow: 0 8px 20px rgba(14, 165, 233, 0.5);
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
         }
     }
 }

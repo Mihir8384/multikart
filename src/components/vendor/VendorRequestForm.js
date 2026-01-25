@@ -305,9 +305,11 @@ const VendorRequestForm = () => {
                         />
                       </TabPane>
                     </TabContent>
+                  </Col>
 
-                    {/* Form Actions */}
-                    <div className="ms-auto justify-content-end dflex-wgap mt-sm-4 mt-2 save-back-button">
+                  {/* Form Actions - Full width after sidebar */}
+                  <Col xl={{ size: 7, offset: 3 }} lg={{ size: 8, offset: 4 }} className="mt-4">
+                    <div className="save-back-button">
                       <Btn
                         className="btn-outline"
                         title="Back"
